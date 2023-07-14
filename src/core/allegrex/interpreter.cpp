@@ -107,7 +107,7 @@ void iCTC(Allegrex *allegrex, int copN, u32 instr) {
     }
 
     if (ENABLE_DISASM) {
-        std::printf("CTC%d %s, %d; %d = 0x%08X\n", copN, regNames[rt], rd, rd, t);
+        std::printf("[%s] [0x%08X] CTC%d %s, %d; %d = 0x%08X\n", allegrex->getTypeName(), cpc, copN, regNames[rt], rd, rd, t);
     }
 }
 
