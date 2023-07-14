@@ -12,6 +12,7 @@ namespace psp::gpio {
 
 enum class GPIOReg {
     OUTEN = 0x1E240000,
+    READ  = 0x1E240004,
     INEN  = 0x1E240040,
 };
 
@@ -24,6 +25,10 @@ u32 read(u32 addr) {
             std::puts("[GPIO    ] Read @ OUTEN");
 
             return outen;
+        case GPIOReg::READ:
+            std::puts("[GPIO    ] Read @ READ");
+
+            return 0;
         case GPIOReg::INEN:
             std::puts("[GPIO    ] Read @ INEN");
 
