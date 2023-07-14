@@ -28,9 +28,12 @@ struct Allegrex {
 
     u32  getPC();
     void setPC(u32 addr);
+    void setBranchPC(u32 addr);
 
     void advanceDelay();
     void advancePC();
+
+    void doBranch(u32 target, bool cond, int linkReg, bool isLikely);
 
     // Read/write handlers
     u8  (*read8 )(u32);

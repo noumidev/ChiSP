@@ -88,6 +88,22 @@ void Allegrex::setPC(u32 addr) {
     npc = addr + 4;
 }
 
+void Allegrex::setBranchPC(u32 addr) {
+    if (!addr) {
+        std::printf("%s jumped to NULL\n", typeNames[(int)type]);
+
+        exit(0);
+    }
+
+    if (addr & 3) {
+        std::printf("%s jumped to unaligned address 0x%08X\n", typeNames[(int)type], addr);
+
+        exit(0);
+    }
+
+    npc = addr;
+}
+
 void Allegrex::advanceDelay() {
     inDelaySlot[0] = inDelaySlot[1];
     inDelaySlot[1] = false;
@@ -96,6 +112,27 @@ void Allegrex::advanceDelay() {
 void Allegrex::advancePC() {
     pc = npc;
     npc += 4;
+}
+
+void Allegrex::doBranch(u32 target, bool cond, int linkReg, bool isLikely) {
+    if (inDelaySlot[0]) {
+        std::printf("%s branch instruction in delay slot\n", typeNames[(int)type]);
+
+        exit(0);
+    }
+
+    set(linkReg, npc);
+
+    inDelaySlot[1] = true;
+
+    if (cond) {
+        setBranchPC(target);
+    } else if (isLikely) {
+        // Skip delay slot
+        setPC(npc);
+
+        inDelaySlot[1] = false;
+    }
 }
 
 }
