@@ -44,12 +44,14 @@ enum class Opcode {
     COP0 = 0x10,
     SPECIAL3 = 0x1F,
     LW = 0x23,
+    SW = 0x2B,
     CACHE = 0x2F,
 };
 
 enum class SPECIAL {
     SLL  = 0x00,
     SLLV = 0x04,
+    JR = 0x08,
     ADDU = 0x21,
 };
 
@@ -212,6 +214,19 @@ void iJAL(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Jump Register
+void iJR(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+
+    const auto target = allegrex->get(rs);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] JR %s; PC = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target);
+    }
+
+    allegrex->doBranch(target, true, Reg::R0, false);
+}
+
 // Load Upper Immediate
 void iLUI(Allegrex *allegrex, u32 instr) {
     const auto rt  = getRt(instr);
@@ -325,6 +340,28 @@ void iSLLV(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Store Word
+void iSW(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+    const auto data = allegrex->get(rt);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SW %s, 0x%X(%s); [0x%08X] = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], addr, data);
+    }
+
+    if (addr & 3) {
+        std::printf("Misaligned %s SW address 0x%08X, PC: 0x%08X\n", allegrex->getTypeName(), addr, cpc);
+
+        exit(0);
+    }
+
+    allegrex->write32(addr, data);
+}
+
 i64 doInstr(Allegrex *allegrex) {
     const auto instr = allegrex->read32(cpc);
 
@@ -344,6 +381,9 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case SPECIAL::SLLV:
                         iSLLV(allegrex, instr);
+                        break;
+                    case SPECIAL::JR:
+                        iJR(allegrex, instr);
                         break;
                     case SPECIAL::ADDU:
                         iADDU(allegrex, instr);
@@ -405,6 +445,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::LW:
             iLW(allegrex, instr);
+            break;
+        case Opcode::SW:
+            iSW(allegrex, instr);
             break;
         case Opcode::CACHE:
             iCACHE(allegrex, instr);
