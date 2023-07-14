@@ -23,6 +23,8 @@ enum class ControlReg {
 
 enum class StatusReg {
     Config = 0x10,
+    TagLo = 0x1C,
+    TagHi = 0x1D,
 };
 
 void COP0::init(int cpuID) {
@@ -70,6 +72,9 @@ u32 COP0::getStatus(int idx) {
 
 void COP0::setStatus(int idx, u32 data) {
     switch ((StatusReg)idx) {
+        case StatusReg::TagLo:
+        case StatusReg::TagHi:
+            break;
         default:
             std::printf("Unhandled %s status write @ %d = 0x%08X\n", cop0Name[cpuID], idx, data);
 
