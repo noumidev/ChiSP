@@ -86,7 +86,7 @@ u32 read32(u32 addr) {
     } else {
         switch (addr) {
             case 0x1D500010:
-                std::printf("[Memory  ] Unhandled read @ EDRAMINIT1\n");
+                std::printf("[Memory  ] Unhandled read32 @ EDRAMINIT1\n");
                 return 0; // Pre IPL hangs if bit 0 is high
             default:
                 std::printf("Unhandled read32 @ 0x%08X\n", addr);
