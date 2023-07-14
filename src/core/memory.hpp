@@ -12,16 +12,20 @@ namespace psp::memory {
 enum class MemoryBase {
     SPRAM = 0x00010000,
     SysCon  = 0x1C100000,
+    NAND  = 0x1D101000,
     GPIO  = 0x1E240000,
     BootROM = 0x1FC00000,
+    NANDBuffer = 0x1FF00000,
     PAddrSpace = 0x20000000,
 };
 
 enum class MemorySize {
     SPRAM = 0x4000,
     SysCon  = 0xE8,
+    NAND  = 0x304,
     GPIO  = 0x4C,
     BootROM = 0x1000,
+    NANDBuffer = 0x910,
 };
 
 void init(const char *bootPath);

@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "gpio.hpp"
+#include "nand.hpp"
 #include "syscon.hpp"
 #include "../common/file.hpp"
 
@@ -79,10 +80,14 @@ u32 read32(u32 addr) {
         std::memcpy(&data, &spram[addr & ((u32)MemorySize::SPRAM - 1)], sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
+        return nand::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &bootROM[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::NANDBuffer, (u64)MemorySize::NANDBuffer)) {
+        return nand::readBuffer32(addr);
     } else {
         switch (addr) {
             case 0x1D500010:
@@ -139,6 +144,8 @@ void write32(u32 addr, u32 data) {
         std::memcpy(&spram[addr & ((u32)MemorySize::SPRAM - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
+        return nand::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
