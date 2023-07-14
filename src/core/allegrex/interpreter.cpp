@@ -37,6 +37,7 @@ const char *regNames[34] = {
 
 enum class Opcode {
     SPECIAL = 0x00,
+    REGIMM  = 0x01,
     JAL  = 0x03,
     BEQ  = 0x04,
     BNE  = 0x05,
@@ -47,8 +48,9 @@ enum class Opcode {
     LUI  = 0x0F,
     COP0 = 0x10,
     SPECIAL3 = 0x1F,
-    LW = 0x23,
-    SW = 0x2B,
+    LW  = 0x23,
+    LHU = 0x25,
+    SW  = 0x2B,
     CACHE = 0x2F,
 };
 
@@ -68,6 +70,10 @@ enum class SPECIAL {
 
 enum class SPECIAL3 {
     EXT = 0x00,
+};
+
+enum class REGIMM {
+    BLTZ = 0x00,
 };
 
 enum class COPOpcode {
@@ -204,6 +210,22 @@ void iBGTZ(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Branch if Less Than Zero
+void iBLTZ(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s < 0, Reg::R0, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BLTZ %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
 // Branch if Not Equal
 void iBNE(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -310,6 +332,27 @@ void iJALR(Allegrex *allegrex, u32 instr) {
     }
 
     allegrex->doBranch(target, true, rd, false);
+}
+
+// Load Halfword Unsigned
+void iLHU(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] LHU %s, 0x%X(%s); %s = [0x%08X]\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], regNames[rt], addr);
+    }
+
+    if (addr & 1) {
+        std::printf("Misaligned %s LHU address 0x%08X, PC: 0x%08X\n", allegrex->getTypeName(), addr, cpc);
+
+        exit(0);
+    }
+
+    allegrex->set(rt, allegrex->read16(addr));
 }
 
 // Load Upper Immediate
@@ -591,6 +634,21 @@ i64 doInstr(Allegrex *allegrex) {
                 }
             }
             break;
+        case Opcode::REGIMM:
+            {
+                const auto rt = getRt(instr);
+
+                switch ((REGIMM)rt) {
+                    case REGIMM::BLTZ:
+                        iBLTZ(allegrex, instr);
+                        break;
+                    default:
+                        std::printf("Unhandled %s REGIMM instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rt, instr, cpc);
+
+                        exit(0);
+                }
+            }
+            break;
         case Opcode::JAL:
             iJAL(allegrex, instr);
             break;
@@ -653,6 +711,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::LW:
             iLW(allegrex, instr);
+            break;
+        case Opcode::LHU:
+            iLHU(allegrex, instr);
             break;
         case Opcode::SW:
             iSW(allegrex, instr);
