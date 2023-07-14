@@ -11,6 +11,7 @@ namespace psp::memory {
 
 enum class MemoryBase {
     BootROM = 0x1FC00000,
+    PAddrSpace = 0x20000000,
 };
 
 enum class MemorySize {
@@ -18,5 +19,16 @@ enum class MemorySize {
 };
 
 void init(const char *bootPath);
+
+// Allegrex read/write handlers
+u8  read8 (u32 addr);
+u16 read16(u32 addr);
+u32 read32(u32 addr);
+
+void write8 (u32 addr, u8  data);
+void write16(u32 addr, u16 data);
+void write32(u32 addr, u32 data);
+
+// TODO: MediaEngine read/write handlers
 
 }
