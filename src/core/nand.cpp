@@ -28,7 +28,7 @@ enum class NANDReg {
 };
 
 enum class NANDCommand {
-    Reset = 0xFF,
+    RESET = 0xFF,
 };
 
 enum STATUS {
@@ -49,7 +49,7 @@ u32 status, dmapage, dmactrl;
 
 void doCommand(u8 cmd) {
     switch ((NANDCommand)cmd) {
-        case NANDCommand::Reset:
+        case NANDCommand::RESET:
             std::puts("[NAND    ] Reset");
 
             status = STATUS::NAND_READY;
