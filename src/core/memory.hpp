@@ -15,6 +15,7 @@ enum class MemoryBase {
     NAND  = 0x1D101000,
     GPIO  = 0x1E240000,
     BootROM = 0x1FC00000,
+    IRAM  = 0x1FD00000,
     NANDBuffer = 0x1FF00000,
     PAddrSpace = 0x20000000,
 };
