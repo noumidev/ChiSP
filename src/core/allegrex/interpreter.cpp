@@ -43,6 +43,7 @@ enum class Opcode {
     BNE  = 0x05,
     BGTZ  = 0x07,
     ADDIU = 0x09,
+    SLTIU = 0x0B,
     ANDI = 0x0C,
     ORI  = 0x0D,
     LUI  = 0x0F,
@@ -507,6 +508,19 @@ void iSLLV(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Set on Less Than Immediate Unsigned
+void iSLTIU(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = getImm(instr);
+
+    allegrex->set(rt, allegrex->get(rs) < imm);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SLTIU %s, %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
+    }
+}
+
 // Shift Right Logical
 void iSRL(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -663,6 +677,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::ADDIU:
             iADDIU(allegrex, instr);
+            break;
+        case Opcode::SLTIU:
+            iSLTIU(allegrex, instr);
             break;
         case Opcode::ANDI:
             iANDI(allegrex, instr);
