@@ -13,6 +13,7 @@ set(CMAKE_BUILD_TYPE Debug)
 # Set source and header files
 set(SOURCES
     src/main.cpp
+    src/core/gpio.cpp
     src/core/memory.cpp
     src/core/psp.cpp
     src/core/syscon.cpp
@@ -24,6 +25,7 @@ set(SOURCES
 set(HEADERS
     src/common/file.hpp
     src/common/types.hpp
+    src/core/gpio.hpp
     src/core/memory.hpp
     src/core/psp.hpp
     src/core/syscon.hpp
