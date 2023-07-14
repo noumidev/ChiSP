@@ -64,10 +64,17 @@ void doCommand(u8 cmd) {
 void doDMA(bool toNAND, bool isPageEnabled, bool isSpareEnabled) {
     assert(!toNAND && isPageEnabled && isSpareEnabled);
 
+    std::printf("[NAND    ] DMA transfer from NAND page 0x%X\n", dmapage);
+
     std::memcpy(nandBuffer.data(), &nand[PAGE_SIZE_ECC * dmapage], PAGE_SIZE_ECC);
 
     // Clear DMA busy bit
     dmactrl &= ~DMA_BUSY;
+
+    std::puts("NAND buffer is:");
+    for (u64 i = 0; i < PAGE_SIZE_ECC; i += 16) {
+        std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&nandBuffer[i], *(u32 *)&nandBuffer[i + 4], *(u32 *)&nandBuffer[i + 8], *(u32 *)&nandBuffer[i + 12]);
+    }
 }
 
 // Loads a NAND image
@@ -85,7 +92,7 @@ u32 read(u32 addr) {
             return status;
         case NANDReg::DMACTRL:
             std::puts("[NAND    ] Read @ DMACTRL");
-            return 0;
+            return dmactrl;
         case NANDReg::DMASTATUS:
             std::puts("[NAND    ] Read @ DMASTATUS");
             return 0;
@@ -134,15 +141,12 @@ u32 readBuffer32(u32 addr) {
     } else {
         switch (addr) {
             case 0x1FF00900:
-                std::memcpy(&data, &nandBuffer[PAGE_SIZE], sizeof(u32));
-                break;
-            case 0x1FF00904:
                 std::memcpy(&data, &nandBuffer[PAGE_SIZE + 0x4], sizeof(u32));
                 break;
-            case 0x1FF00908:
+            case 0x1FF00904:
                 std::memcpy(&data, &nandBuffer[PAGE_SIZE + 0x8], sizeof(u32));
                 break;
-            case 0x1FF0090C:
+            case 0x1FF00908:
                 std::memcpy(&data, &nandBuffer[PAGE_SIZE + 0xC], sizeof(u32));
                 break;
             default:
