@@ -13,6 +13,7 @@
 #include "gpio.hpp"
 #include "nand.hpp"
 #include "syscon.hpp"
+#include "crypto/kirk.hpp"
 #include "../common/file.hpp"
 
 namespace psp::memory {
@@ -35,6 +36,19 @@ void init(const char *bootPath) {
     iram = (u8 *)std::malloc((u64)MemorySize::BootROM); // Extra scratchpad RAM
 
     std::puts("[Memory  ] OK");
+}
+
+u8 *getMemoryPointer(u32 addr) {
+    if ((iram != NULL) && inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+        return iram;
+    } else {
+        switch (addr) {
+            default:
+                std::printf("Unhandled memory region @ 0x%08X\n", addr);
+
+                exit(0);
+        }
+    }
 }
 
 u8 read8(u32 addr) {
@@ -90,6 +104,8 @@ u32 read32(u32 addr) {
         return syscon::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
         return nand::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
+        return kirk::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
@@ -160,6 +176,8 @@ void write32(u32 addr, u32 data) {
         return syscon::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
         return nand::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
+        return kirk::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
