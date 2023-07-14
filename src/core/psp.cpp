@@ -8,6 +8,7 @@
 #include <cstdio>
 
 #include "memory.hpp"
+#include "nand.hpp"
 #include "allegrex/allegrex.hpp"
 #include "allegrex/interpreter.hpp"
 
@@ -17,8 +18,9 @@ using namespace allegrex;
 
 Allegrex cpu;
 
-void init(const char *bootPath) {
+void init(const char *bootPath, const char *nandPath) {
     memory::init(bootPath);
+    nand::init(nandPath);
 
     cpu.init(Type::Allegrex);
 

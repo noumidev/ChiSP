@@ -7,7 +7,7 @@
 
 namespace psp {
 
-void init(const char *bootPath);
+void init(const char *bootPath, const char *nandPath);
 
 void run();
 
