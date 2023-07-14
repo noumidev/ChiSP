@@ -17,6 +17,7 @@ namespace psp::memory {
 
 // PSP system memory
 std::array<u8, (u64)MemorySize::BootROM> bootROM;
+std::array<u8, (u64)MemorySize::SPRAM> spram;
 
 // Returns true if addr is in the range base,(base + size)
 bool inRange(u64 addr, u64 base, u64 size) {
@@ -33,7 +34,9 @@ void init(const char *bootPath) {
 u8 read8(u32 addr) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
+    if (inRange(addr, (u64)MemoryBase::SPRAM, (u64)MemorySize::SPRAM)) {
+        return spram[addr & ((u32)MemorySize::SPRAM - 1)];
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         return bootROM[addr & ((u32)MemorySize::BootROM - 1)];
     } else {
         switch (addr) {
@@ -50,7 +53,9 @@ u16 read16(u32 addr) {
 
     u16 data;
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
+    if (inRange(addr, (u64)MemoryBase::SPRAM, (u64)MemorySize::SPRAM)) {
+        std::memcpy(&data, &spram[addr & ((u32)MemorySize::SPRAM - 1)], sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &bootROM[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u16));
     } else {
         switch (addr) {
@@ -69,7 +74,9 @@ u32 read32(u32 addr) {
 
     u32 data;
 
-    if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
+    if (inRange(addr, (u64)MemoryBase::SPRAM, (u64)MemorySize::SPRAM)) {
+        std::memcpy(&data, &spram[addr & ((u32)MemorySize::SPRAM - 1)], sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &bootROM[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u32));
@@ -88,7 +95,9 @@ u32 read32(u32 addr) {
 void write8(u32 addr, u8 data) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
+    if (inRange(addr, (u64)MemoryBase::SPRAM, (u64)MemorySize::SPRAM)) {
+        spram[addr & ((u32)MemorySize::SPRAM - 1)] = data;
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         bootROM[addr & ((u32)MemorySize::BootROM - 1)] = data;
     } else {
         switch (addr) {
@@ -103,7 +112,9 @@ void write8(u32 addr, u8 data) {
 void write16(u32 addr, u16 data) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
+    if (inRange(addr, (u64)MemoryBase::SPRAM, (u64)MemorySize::SPRAM)) {
+        std::memcpy(&spram[addr & ((u32)MemorySize::SPRAM - 1)], &data, sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&bootROM[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u16));
     } else {
         switch (addr) {
@@ -118,7 +129,9 @@ void write16(u32 addr, u16 data) {
 void write32(u32 addr, u32 data) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
+    if (inRange(addr, (u64)MemoryBase::SPRAM, (u64)MemorySize::SPRAM)) {
+        std::memcpy(&spram[addr & ((u32)MemorySize::SPRAM - 1)], &data, sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&bootROM[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u32));
     } else {
         switch (addr) {
