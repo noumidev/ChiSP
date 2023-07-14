@@ -15,7 +15,9 @@ enum class SysConReg {
     RESETEN = 0x1C10004C,
     BUSCLKEN  = 0x1C100050,
     GPIOCLKEN = 0x1C100058,
+    PLLFREQ = 0x1C100068,
     IOEN = 0x1C100078,
+    GPIOEN = 0x1C10007C,
 };
 
 // NMI registers
@@ -24,7 +26,10 @@ u32 nmien;
 // Clock registers
 u32 busclken, gpioclken;
 
-u32 reseten = -1, ioen;
+// Enable
+u32 reseten = -1, ioen, gpioen;
+
+u32 pllfreq;
 
 u32 read(u32 addr) {
     switch ((SysConReg)addr) {
@@ -44,10 +49,18 @@ u32 read(u32 addr) {
             std::puts("[SysCon  ] Read @ GPIOCLKEN");
 
             return gpioclken;
+        case SysConReg::PLLFREQ:
+            std::puts("[SysCon  ] Read @ PLLFREQ");
+
+            return pllfreq;
         case SysConReg::IOEN:
             std::puts("[SysCon  ] Read @ IOEN");
 
             return ioen;
+        case SysConReg::GPIOEN:
+            std::puts("[SysCon  ] Read @ GPIOEN");
+
+            return gpioen;
         default:
             std::printf("[SysCon  ] Unhandled read @ 0x%08X\n", addr);
 
@@ -76,6 +89,11 @@ void write(u32 addr, u32 data) {
             std::printf("[SysCon  ] Write @ IOEN = 0x%08X\n", data);
 
             ioen = data;
+            break;
+        case SysConReg::GPIOEN:
+            std::printf("[SysCon  ] Write @ GPIOEN = 0x%08X\n", data);
+
+            gpioen = data;
             break;
         default:
             std::printf("[SysCon  ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
