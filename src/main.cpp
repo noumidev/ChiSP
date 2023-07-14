@@ -8,13 +8,13 @@
 #include "core/psp.hpp"
 
 int main(int argc, char **argv) {
-    if (argc < 2) {
-        std::puts("Usage: ChiSP boot.bin");
+    if (argc < 3) {
+        std::puts("Usage: ChiSP boot.bin nand.bin");
 
         return -1;
     }
 
-    psp::init(argv[1]);
+    psp::init(argv[1], argv[2]);
     psp::run();
 
     return 0;
