@@ -58,8 +58,10 @@ enum class SPECIAL {
     JR = 0x08,
     SYNC = 0x0F,
     ADDU = 0x21,
-    AND  = 0x24,
-    OR = 0x25,
+    AND = 0x24,
+    OR  = 0x25,
+    XOR = 0x26,
+    NOR = 0x27,
 };
 
 enum class SPECIAL3 {
@@ -364,6 +366,19 @@ void iMTC(Allegrex *allegrex, int copN, u32 instr) {
     }
 }
 
+// NOR
+void iNOR(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, ~(allegrex->get(rs) | allegrex->get(rt)));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] NOR %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 // OR
 void iOR(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -464,6 +479,19 @@ void iSYNC(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// XOR
+void iXOR(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, allegrex->get(rs) ^ allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] XOR %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 i64 doInstr(Allegrex *allegrex) {
     const auto instr = allegrex->read32(cpc);
 
@@ -517,6 +545,12 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case SPECIAL::OR:
                         iOR(allegrex, instr);
+                        break;
+                    case SPECIAL::XOR:
+                        iXOR(allegrex, instr);
+                        break;
+                    case SPECIAL::NOR:
+                        iNOR(allegrex, instr);
                         break;
                     default:
                         std::printf("Unhandled %s SPECIAL instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, instr, cpc);
