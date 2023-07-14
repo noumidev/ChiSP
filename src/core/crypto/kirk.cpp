@@ -17,8 +17,11 @@
 
 namespace psp::kirk {
 
+constexpr u64 KEY_SIZE  = 0x10;
+constexpr u64 HASH_SIZE = 0x10;
+
 constexpr u64 KHEADER_SIZE = 0x60;
-constexpr u64 MHEADER_SIZE = 0x20;
+constexpr u64 MHEADER_SIZE = 0x30;
 
 constexpr u8 AES_MASTER_KEY[] = {0x98, 0xC9, 0x40, 0x97, 0x5C, 0x1D, 0x10, 0xE8, 0x7F, 0xE6, 0x0E, 0xA3, 0xFD, 0x03, 0xA8, 0xBA};
 
@@ -41,8 +44,8 @@ enum STATUS {
 };
 
 struct KeyHeaderAES {
-    u8 decryptKey[16], cmacKey[16];
-    u8 headerHash[16], dataHash[16];
+    u8 decryptKey[KEY_SIZE], cmacKey[KEY_SIZE];
+    u8 headerHash[HASH_SIZE], dataHash[HASH_SIZE];
     u8 _unused0[32];
 };
 
@@ -54,6 +57,7 @@ struct MetadataHeader {
     u32 _unused1[2]; // 0, 0 or -1
     u32 dataLength, paddingLength;
     u32 _unused2[2]; // 0
+    u32 _unused3[4];
 } __attribute__((packed));
 
 static_assert(sizeof(MetadataHeader) == MHEADER_SIZE);
@@ -68,7 +72,7 @@ u32 srcAddr, dstAddr;
 // Decrypt data with AES (ECB)
 void kirkDecryptAES(const u8 *key, u8 *data, u64 size) {
     // Set up AES engine
-    auto aes = CryptoPP::ECB_Mode<CryptoPP::AES>::Decryption(key, 16);
+    auto aes = CryptoPP::ECB_Mode<CryptoPP::AES>::Decryption(key, KEY_SIZE);    
 
     aes.ProcessData(data, data, size);
 }
@@ -114,8 +118,8 @@ void cmdDecryptPrivate() {
         KeyHeaderAES kHeader;
         std::memcpy(&kHeader, keyHeader, KHEADER_SIZE);
 
-        kirkDecryptAES(AES_MASTER_KEY, kHeader.decryptKey, 16);
-        kirkDecryptAES(AES_MASTER_KEY, kHeader.cmacKey, 16);
+        kirkDecryptAES(AES_MASTER_KEY, kHeader.decryptKey, KEY_SIZE);
+        kirkDecryptAES(AES_MASTER_KEY, kHeader.cmacKey, KEY_SIZE);
 
         // (Debug) Print decrypted keys
         std::puts("Decrypt key is:");
