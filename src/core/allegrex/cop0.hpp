@@ -15,8 +15,12 @@ struct COP0 {
     u32  getControl(int idx);
     void setControl(int idx, u32 data);
 private:
-    u32 cpuid;
+    // Status
+    u32 cpuID;
+
+    // Control
     u32 v0;
+    u32 errorHandler;
 };
 
 }
