@@ -13,7 +13,7 @@
 
 namespace psp::allegrex::interpreter {
 
-constexpr auto ENABLE_DISASM = true;
+constexpr auto ENABLE_DISASM = false;
 
 enum Reg {
     R0 =  0, AT =  1, V0 =  2, V1 =  3,
@@ -38,8 +38,11 @@ const char *regNames[34] = {
 enum class Opcode {
     SPECIAL = 0x00,
     JAL  = 0x03,
+    BEQ  = 0x04,
     BNE  = 0x05,
+    BGTZ  = 0x07,
     ADDIU = 0x09,
+    ORI  = 0x0D,
     LUI  = 0x0F,
     COP0 = 0x10,
     SPECIAL3 = 0x1F,
@@ -50,9 +53,13 @@ enum class Opcode {
 
 enum class SPECIAL {
     SLL  = 0x00,
+    SRL  = 0x02,
     SLLV = 0x04,
     JR = 0x08,
+    SYNC = 0x0F,
     ADDU = 0x21,
+    AND  = 0x24,
+    OR = 0x25,
 };
 
 enum class SPECIAL3 {
@@ -130,6 +137,53 @@ void iADDU(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] ADDU %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
+// AND
+void iAND(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, allegrex->get(rs) & allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] AND %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
+// Branch if EQual
+void iBEQ(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+    const auto t = allegrex->get(rt);
+
+    allegrex->doBranch(target, s == t, Reg::R0, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BEQ %s, %s, 0x%08X; %s = 0x%08X, %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], target, regNames[rs], s, regNames[rt], t);
+    }
+}
+
+// Branch if Greater Than Zero
+void iBGTZ(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s > 0, Reg::R0, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BGTZ %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
     }
 }
 
@@ -310,6 +364,32 @@ void iMTC(Allegrex *allegrex, int copN, u32 instr) {
     }
 }
 
+// OR
+void iOR(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, allegrex->get(rs) | allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] OR %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
+// OR Immediate
+void iORI(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (u32)(i16)getImm(instr);
+
+    allegrex->set(rt, allegrex->get(rs) | imm);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] ORI %s, %s, 0x%X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
+    }
+}
+
 // Shift Left Logical
 void iSLL(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -340,6 +420,19 @@ void iSLLV(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Shift Right Logical
+void iSRL(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+    const auto shamt = getShamt(instr);
+
+    allegrex->set(rd, allegrex->get(rt) >> shamt);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SRL %s, %s, %u; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], shamt, regNames[rd], allegrex->get(rd));
+    }
+}
+
 // Store Word
 void iSW(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -362,6 +455,15 @@ void iSW(Allegrex *allegrex, u32 instr) {
     allegrex->write32(addr, data);
 }
 
+// SYNC
+void iSYNC(Allegrex *allegrex, u32 instr) {
+    (void)instr;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SYNC\n", allegrex->getTypeName(), cpc);
+    }
+}
+
 i64 doInstr(Allegrex *allegrex) {
     const auto instr = allegrex->read32(cpc);
 
@@ -379,14 +481,42 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::SLL:
                         iSLL(allegrex, instr);
                         break;
+                    case SPECIAL::SRL:
+                        {
+                            const auto rs = getRs(instr);
+
+                            switch (rs) {
+                                case 0:
+                                    iSRL(allegrex, instr);
+                                    break;
+                                case 1:
+                                    std::puts("Unimplemented ROTR");
+                                    
+                                    exit(0);
+                                default:
+                                    std::printf("Invalid %s instruction 0x%02X:0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, rs, instr, cpc);
+
+                                    exit(0);
+                            }
+                        }
+                        break;
                     case SPECIAL::SLLV:
                         iSLLV(allegrex, instr);
                         break;
                     case SPECIAL::JR:
                         iJR(allegrex, instr);
                         break;
+                    case SPECIAL::SYNC:
+                        iSYNC(allegrex, instr);
+                        break;
                     case SPECIAL::ADDU:
                         iADDU(allegrex, instr);
+                        break;
+                    case SPECIAL::AND:
+                        iAND(allegrex, instr);
+                        break;
+                    case SPECIAL::OR:
+                        iOR(allegrex, instr);
                         break;
                     default:
                         std::printf("Unhandled %s SPECIAL instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, instr, cpc);
@@ -398,11 +528,20 @@ i64 doInstr(Allegrex *allegrex) {
         case Opcode::JAL:
             iJAL(allegrex, instr);
             break;
+        case Opcode::BEQ:
+            iBEQ(allegrex, instr);
+            break;
         case Opcode::BNE:
             iBNE(allegrex, instr);
             break;
+        case Opcode::BGTZ:
+            iBGTZ(allegrex, instr);
+            break;
         case Opcode::ADDIU:
             iADDIU(allegrex, instr);
+            break;
+        case Opcode::ORI:
+            iORI(allegrex, instr);
             break;
         case Opcode::LUI:
             iLUI(allegrex, instr);
