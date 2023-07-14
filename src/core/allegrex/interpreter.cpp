@@ -42,6 +42,7 @@ enum class Opcode {
     BNE  = 0x05,
     BGTZ  = 0x07,
     ADDIU = 0x09,
+    ANDI = 0x0C,
     ORI  = 0x0D,
     LUI  = 0x0F,
     COP0 = 0x10,
@@ -56,6 +57,7 @@ enum class SPECIAL {
     SRL  = 0x02,
     SLLV = 0x04,
     JR = 0x08,
+    JALR = 0x09,
     SYNC = 0x0F,
     ADDU = 0x21,
     AND = 0x24,
@@ -152,6 +154,19 @@ void iAND(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] AND %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
+// AND Immediate
+void iANDI(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (u32)(i16)getImm(instr);
+
+    allegrex->set(rt, allegrex->get(rs) & imm);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] ANDI %s, %s, 0x%X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
     }
 }
 
@@ -281,6 +296,20 @@ void iJR(Allegrex *allegrex, u32 instr) {
     }
 
     allegrex->doBranch(target, true, Reg::R0, false);
+}
+
+// Jump And Link Register
+void iJALR(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+
+    const auto target = allegrex->get(rs);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] JALR %s, %s; %s = 0x%08X, PC = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rd], allegrex->get(rd), target);
+    }
+
+    allegrex->doBranch(target, true, rd, false);
 }
 
 // Load Upper Immediate
@@ -534,6 +563,9 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::JR:
                         iJR(allegrex, instr);
                         break;
+                    case SPECIAL::JALR:
+                        iJALR(allegrex, instr);
+                        break;
                     case SPECIAL::SYNC:
                         iSYNC(allegrex, instr);
                         break;
@@ -573,6 +605,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::ADDIU:
             iADDIU(allegrex, instr);
+            break;
+        case Opcode::ANDI:
+            iANDI(allegrex, instr);
             break;
         case Opcode::ORI:
             iORI(allegrex, instr);
