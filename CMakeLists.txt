@@ -7,8 +7,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set compile options
-add_compile_options(-Wall -Werror -Wextra)
+add_compile_options(-Wall -Wextra)
 set(CMAKE_BUILD_TYPE Debug)
+
+add_subdirectory(cryptopp-cmake)
 
 # Set source and header files
 set(SOURCES
