@@ -15,6 +15,7 @@ set(SOURCES
     src/main.cpp
     src/core/gpio.cpp
     src/core/memory.cpp
+    src/core/nand.cpp
     src/core/psp.cpp
     src/core/syscon.cpp
     src/core/allegrex/allegrex.cpp
@@ -27,6 +28,7 @@ set(HEADERS
     src/common/types.hpp
     src/core/gpio.hpp
     src/core/memory.hpp
+    src/core/nand.hpp
     src/core/psp.hpp
     src/core/syscon.hpp
     src/core/allegrex/allegrex.hpp
