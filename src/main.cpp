@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
     }
 
     psp::init(argv[1]);
+    psp::run();
 
     return 0;
 }

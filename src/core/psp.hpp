@@ -9,4 +9,6 @@ namespace psp {
 
 void init(const char *bootPath);
 
+void run();
+
 }
