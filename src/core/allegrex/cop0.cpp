@@ -10,13 +10,19 @@
 
 namespace psp::allegrex::cop0 {
 
+constexpr u32 CONFIG = 0x480;
+
 const char *cop0Name[] = {
     "COP0:CPU", "COP0:ME ",
 };
 
-enum Control {
+enum class ControlReg {
     V0 = 0x04,
     ErrorHandler = 0x09,
+};
+
+enum class StatusReg {
+    Config = 0x10,
 };
 
 void COP0::init(int cpuID) {
@@ -28,7 +34,7 @@ void COP0::init(int cpuID) {
 }
 
 u32 COP0::getControl(int idx) {
-    switch (idx) {
+    switch ((ControlReg)idx) {
         default:
             std::printf("Unhandled %s control read @ %d\n", cop0Name[cpuID], idx);
 
@@ -37,15 +43,35 @@ u32 COP0::getControl(int idx) {
 }
 
 void COP0::setControl(int idx, u32 data) {
-    switch (idx) {
-        case Control::V0:
+    switch ((ControlReg)idx) {
+        case ControlReg::V0:
             v0 = data;
             break;
-        case Control::ErrorHandler:
+        case ControlReg::ErrorHandler:
             errorHandler = data;
             break;
         default:
             std::printf("Unhandled %s control write @ %d = 0x%08X\n", cop0Name[cpuID], idx, data);
+
+            exit(0);
+    }
+}
+
+u32 COP0::getStatus(int idx) {
+    switch ((StatusReg)idx) {
+        case StatusReg::Config:
+            return CONFIG;
+        default:
+            std::printf("Unhandled %s status read @ %d\n", cop0Name[cpuID], idx);
+
+            exit(0);
+    }
+}
+
+void COP0::setStatus(int idx, u32 data) {
+    switch ((StatusReg)idx) {
+        default:
+            std::printf("Unhandled %s status write @ %d = 0x%08X\n", cop0Name[cpuID], idx, data);
 
             exit(0);
     }

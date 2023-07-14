@@ -14,6 +14,9 @@ struct COP0 {
 
     u32  getControl(int idx);
     void setControl(int idx, u32 data);
+
+    u32  getStatus(int idx);
+    void setStatus(int idx, u32 data);
 private:
     // Status
     u32 cpuID;
