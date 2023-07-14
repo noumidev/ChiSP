@@ -131,6 +131,8 @@ void write32(u32 addr, u32 data) {
 
     if (inRange(addr, (u64)MemoryBase::SPRAM, (u64)MemorySize::SPRAM)) {
         std::memcpy(&spram[addr & ((u32)MemorySize::SPRAM - 1)], &data, sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
+        return syscon::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&bootROM[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u32));
     } else {
