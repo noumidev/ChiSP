@@ -42,15 +42,24 @@ enum class Opcode {
     ADDIU = 0x09,
     LUI  = 0x0F,
     COP0 = 0x10,
+    SPECIAL3 = 0x1F,
     LW = 0x23,
+    CACHE = 0x2F,
 };
 
 enum class SPECIAL {
-    SLL = 0x00,
+    SLL  = 0x00,
+    SLLV = 0x04,
+    ADDU = 0x21,
+};
+
+enum class SPECIAL3 {
+    EXT = 0x00,
 };
 
 enum class COPOpcode {
     MFC = 0x00,
+    MTC = 0x04,
     CTC = 0x06,
 };
 
@@ -109,6 +118,19 @@ void iADDIU(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// ADD Unsigned
+void iADDU(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, allegrex->get(rs) + allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] ADDU %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 // Branch if Not Equal
 void iBNE(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -124,6 +146,17 @@ void iBNE(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] BNE %s, %s, 0x%08X; %s = 0x%08X, %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], target, regNames[rs], s, regNames[rt], t);
+    }
+}
+
+// CACHE
+void iCACHE(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] CACHE 0x%X, 0x%X(%s)\n", allegrex->getTypeName(), cpc, rt, imm, regNames[rs]);
     }
 }
 
@@ -148,6 +181,23 @@ void iCTC(Allegrex *allegrex, int copN, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] CTC%d %s, %d; %d = 0x%08X\n", allegrex->getTypeName(), cpc, copN, regNames[rt], rd, rd, t);
+    }
+}
+
+// Extract
+void iEXT(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto pos  = getShamt(instr);
+    const auto size = getRd(instr) + 1;
+
+    assert(size && ((pos + size) < 32));
+
+    // Shift rs by pos, then mask with (1 << size) - 1 (mask is all 1s)
+    allegrex->set(rt, (allegrex->get(rs) >> pos) & ((1llu << size) - 1));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] EXT %s, %s, %u, %u; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], pos, size, regNames[rt], allegrex->get(rt));
     }
 }
 
@@ -209,7 +259,7 @@ void iMFC(Allegrex *allegrex, int copN, u32 instr) {
             data = allegrex->cop0.getStatus(rd);
             break;
         default:
-            std::printf("Unhandled %s CTC coprocessor %d\n", allegrex->getTypeName(), copN);
+            std::printf("Unhandled %s MFC coprocessor %d\n", allegrex->getTypeName(), copN);
 
             exit(0);
     }
@@ -218,6 +268,30 @@ void iMFC(Allegrex *allegrex, int copN, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] MFC%d %s, %d; %s = 0x%08X\n", allegrex->getTypeName(), cpc, copN, regNames[rt], rd, regNames[rt], data);
+    }
+}
+
+// Move To Coprocessor
+void iMTC(Allegrex *allegrex, int copN, u32 instr) {
+    assert((copN >= 0) && (copN < 4));
+
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+
+    const auto t = allegrex->get(rt);
+
+    switch (copN) {
+        case 0:
+            allegrex->cop0.setStatus(rd, t);
+            break;
+        default:
+            std::printf("Unhandled %s MTC coprocessor %d\n", allegrex->getTypeName(), copN);
+
+            exit(0);
+    }
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MTC%d %s, %d; %d = 0x%08X\n", allegrex->getTypeName(), cpc, copN, regNames[rt], rd, rd, t);
     }
 }
 
@@ -238,6 +312,19 @@ void iSLL(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Shift Left Logical Variable
+void iSLLV(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, allegrex->get(rt) << (allegrex->get(rs) & 0x1F));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SLLV %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rs], regNames[rd], allegrex->get(rd));
+    }
+}
+
 i64 doInstr(Allegrex *allegrex) {
     const auto instr = allegrex->read32(cpc);
 
@@ -254,6 +341,12 @@ i64 doInstr(Allegrex *allegrex) {
                 switch ((SPECIAL)funct) {
                     case SPECIAL::SLL:
                         iSLL(allegrex, instr);
+                        break;
+                    case SPECIAL::SLLV:
+                        iSLLV(allegrex, instr);
+                        break;
+                    case SPECIAL::ADDU:
+                        iADDU(allegrex, instr);
                         break;
                     default:
                         std::printf("Unhandled %s SPECIAL instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, instr, cpc);
@@ -282,6 +375,9 @@ i64 doInstr(Allegrex *allegrex) {
                     case COPOpcode::MFC:
                         iMFC(allegrex, 0, instr);
                         break;
+                    case COPOpcode::MTC:
+                        iMTC(allegrex, 0, instr);
+                        break;
                     case COPOpcode::CTC:
                         iCTC(allegrex, 0, instr);
                         break;
@@ -292,8 +388,26 @@ i64 doInstr(Allegrex *allegrex) {
                 }
             }
             break;
+        case Opcode::SPECIAL3:
+            {
+                const auto funct = getFunct(instr);
+
+                switch ((SPECIAL3)funct) {
+                    case SPECIAL3::EXT:
+                        iEXT(allegrex, instr);
+                        break;
+                    default:
+                        std::printf("Unhandled %s SPECIAL3 instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, instr, cpc);
+
+                        exit(0);
+                }
+            }
+            break;
         case Opcode::LW:
             iLW(allegrex, instr);
+            break;
+        case Opcode::CACHE:
+            iCACHE(allegrex, instr);
             break;
         default:
             std::printf("Unhandled %s instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), opcode, instr, cpc);
