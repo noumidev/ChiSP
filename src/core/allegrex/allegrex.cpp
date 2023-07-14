@@ -15,7 +15,7 @@ namespace psp::allegrex {
 
 constexpr u32 BOOT_EXCEPTION_BASE = 0xBFC00000;
 
-const char *typeName[] = {
+const char *typeNames[] = {
     "Allegrex", "MediaEng",
 };
 
@@ -27,6 +27,8 @@ void Allegrex::init(Type type) {
 
         exit(0);
     }
+
+    cop0.init((int)type);
 
     // Clear all GPRs and delay slot helpers
     std::memset(regs, 0, sizeof(regs));
@@ -49,11 +51,11 @@ void Allegrex::init(Type type) {
         write32 = &memory::write32;
     }
 
-    std::printf("[%s] OK\n", typeName[(int)type]);
+    std::printf("[%s] OK\n", typeNames[(int)type]);
 }
 
 const char *Allegrex::getTypeName() {
-    return typeName[(int)type];
+    return typeNames[(int)type];
 }
 
 u32 Allegrex::get(int idx) {
@@ -71,13 +73,13 @@ u32 Allegrex::getPC() {
 
 void Allegrex::setPC(u32 addr) {
     if (!addr) {
-        std::printf("%s jumped to NULL\n", typeName[(int)type]);
+        std::printf("%s jumped to NULL\n", typeNames[(int)type]);
 
         exit(0);
     }
 
     if (addr & 3) {
-        std::printf("%s jumped to unaligned address 0x%08X\n", typeName[(int)type], addr);
+        std::printf("%s jumped to unaligned address 0x%08X\n", typeNames[(int)type], addr);
 
         exit(0);
     }

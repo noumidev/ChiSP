@@ -5,9 +5,12 @@
 
 #pragma once
 
+#include "cop0.hpp"
 #include "../../common/types.hpp"
 
 namespace psp::allegrex {
+
+using cop0::COP0;
 
 enum class Type {
     Allegrex,
@@ -37,6 +40,8 @@ struct Allegrex {
     void (*write8 )(u32, u8);
     void (*write16)(u32, u16);
     void (*write32)(u32, u32);
+
+    COP0 cop0;
 
 private:
     Type type; // CPU type
