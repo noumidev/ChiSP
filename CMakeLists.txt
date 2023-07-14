@@ -15,6 +15,8 @@ set(SOURCES
     src/main.cpp
     src/core/memory.cpp
     src/core/psp.cpp
+    src/core/allegrex/allegrex.cpp
+    src/core/allegrex/interpreter.cpp
 )
 
 set(HEADERS
@@ -22,6 +24,8 @@ set(HEADERS
     src/common/types.hpp
     src/core/memory.hpp
     src/core/psp.hpp
+    src/core/allegrex/allegrex.hpp
+    src/core/allegrex/interpreter.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
