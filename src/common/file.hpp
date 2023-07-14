@@ -10,7 +10,7 @@
 #include "types.hpp"
 
 // Returns true on success
-bool loadFile(const char *path, u8 *buf, i64 size) {
+inline bool loadFile(const char *path, u8 *buf, i64 size) {
     const auto file = std::fopen(path, "rb");
 
     if (file == NULL) return false;
