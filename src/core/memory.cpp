@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "gpio.hpp"
 #include "syscon.hpp"
 #include "../common/file.hpp"
 
@@ -78,10 +79,15 @@ u32 read32(u32 addr) {
         std::memcpy(&data, &spram[addr & ((u32)MemorySize::SPRAM - 1)], sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
+        return gpio::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &bootROM[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u32));
     } else {
         switch (addr) {
+            case 0x1D500010:
+                std::printf("[Memory  ] Unhandled read @ EDRAMINIT1\n");
+                return 0; // Pre IPL hangs if bit 0 is high
             default:
                 std::printf("Unhandled read32 @ 0x%08X\n", addr);
 
@@ -133,10 +139,18 @@ void write32(u32 addr, u32 data) {
         std::memcpy(&spram[addr & ((u32)MemorySize::SPRAM - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
+        return gpio::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&bootROM[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u32));
     } else {
         switch (addr) {
+            case 0x1D500010:
+                std::printf("[Memory  ] Unhandled write32 @ EDRAMINIT1 = 0x%08X\n", data);
+                break;
+            case 0x1D500040:
+                std::printf("[Memory  ] Unhandled write32 @ EDRAMINIT2 = 0x%08X\n", data);
+                break;
             default:
                 std::printf("Unhandled write32 @ 0x%08X = 0x%08X\n", addr, data);
 
