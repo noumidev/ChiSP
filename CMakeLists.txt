@@ -15,7 +15,9 @@ set(SOURCES
     src/main.cpp
     src/core/memory.cpp
     src/core/psp.cpp
+    src/core/syscon.cpp
     src/core/allegrex/allegrex.cpp
+    src/core/allegrex/cop0.cpp
     src/core/allegrex/interpreter.cpp
 )
 
@@ -24,7 +26,9 @@ set(HEADERS
     src/common/types.hpp
     src/core/memory.hpp
     src/core/psp.hpp
+    src/core/syscon.hpp
     src/core/allegrex/allegrex.hpp
+    src/core/allegrex/cop0.hpp
     src/core/allegrex/interpreter.hpp
 )
 

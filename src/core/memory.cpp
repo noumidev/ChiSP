@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "syscon.hpp"
 #include "../common/file.hpp"
 
 namespace psp::memory {
@@ -68,7 +69,9 @@ u32 read32(u32 addr) {
 
     u32 data;
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
+    if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
+        return syscon::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &bootROM[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u32));
     } else {
         switch (addr) {

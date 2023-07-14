@@ -10,11 +10,13 @@
 namespace psp::memory {
 
 enum class MemoryBase {
+    SysCon  = 0x1C100000,
     BootROM = 0x1FC00000,
     PAddrSpace = 0x20000000,
 };
 
 enum class MemorySize {
+    SysCon  = 0xE8,
     BootROM = 0x1000,
 };
 
