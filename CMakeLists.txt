@@ -23,6 +23,7 @@ set(SOURCES
     src/core/allegrex/allegrex.cpp
     src/core/allegrex/cop0.cpp
     src/core/allegrex/interpreter.cpp
+    src/core/crypto/kirk.cpp
 )
 
 set(HEADERS
@@ -36,6 +37,7 @@ set(HEADERS
     src/core/allegrex/allegrex.hpp
     src/core/allegrex/cop0.hpp
     src/core/allegrex/interpreter.hpp
+    src/core/crypto/kirk.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
