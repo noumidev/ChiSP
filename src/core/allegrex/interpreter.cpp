@@ -168,7 +168,7 @@ void iAND(Allegrex *allegrex, u32 instr) {
 void iANDI(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
     const auto rt = getRt(instr);
-    const auto imm = (u32)(i16)getImm(instr);
+    const auto imm = getImm(instr);
 
     allegrex->set(rt, allegrex->get(rs) & imm);
 
@@ -469,7 +469,7 @@ void iOR(Allegrex *allegrex, u32 instr) {
 void iORI(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
     const auto rt = getRt(instr);
-    const auto imm = (u32)(i16)getImm(instr);
+    const auto imm = getImm(instr);
 
     allegrex->set(rt, allegrex->get(rs) | imm);
 
