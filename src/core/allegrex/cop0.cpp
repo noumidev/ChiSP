@@ -23,6 +23,8 @@ enum class ControlReg {
 };
 
 enum class StatusReg {
+    Status = 0x0C,
+    Cause  = 0x0D,
     Config = 0x10,
     TagLo = 0x1C,
     TagHi = 0x1D,
@@ -76,6 +78,12 @@ u32 COP0::getStatus(int idx) {
 
 void COP0::setStatus(int idx, u32 data) {
     switch ((StatusReg)idx) {
+        case StatusReg::Status:
+            status = data;
+            break;
+        case StatusReg::Cause:
+            cause = data;
+            break;
         case StatusReg::TagLo:
         case StatusReg::TagHi:
             break;

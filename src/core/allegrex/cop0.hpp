@@ -20,6 +20,7 @@ struct COP0 {
 private:
     // Status
     u32 cpuID;
+    u32 status, cause;
 
     // Control
     u32 v0;
