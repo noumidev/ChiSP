@@ -38,6 +38,7 @@ const char *regNames[34] = {
 enum class Opcode {
     SPECIAL = 0x00,
     REGIMM  = 0x01,
+    J = 0x02,
     JAL  = 0x03,
     BEQ  = 0x04,
     BNE  = 0x05,
@@ -48,9 +49,13 @@ enum class Opcode {
     ORI  = 0x0D,
     LUI  = 0x0F,
     COP0 = 0x10,
+    BNEL = 0x15,
     SPECIAL3 = 0x1F,
+    LH  = 0x21,
     LW  = 0x23,
+    LBU = 0x24,
     LHU = 0x25,
+    SH  = 0x29,
     SW  = 0x2B,
     CACHE = 0x2F,
 };
@@ -245,6 +250,24 @@ void iBNE(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Branch if Not Equal Likely
+void iBNEL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+    const auto t = allegrex->get(rt);
+
+    allegrex->doBranch(target, s != t, Reg::R0, true);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BNEL %s, %s, 0x%08X; %s = 0x%08X, %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], target, regNames[rs], s, regNames[rt], t);
+    }
+}
+
 // CACHE
 void iCACHE(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -297,6 +320,17 @@ void iEXT(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Jump
+void iJ(Allegrex *allegrex, u32 instr) {
+    const auto target = (allegrex->getPC() & 0xF0000000) | (getOffset(instr) << 2);
+
+    allegrex->doBranch(target, true, Reg::R0, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] J 0x%08X\n", allegrex->getTypeName(), cpc, target);
+    }
+}
+
 // Jump And Link
 void iJAL(Allegrex *allegrex, u32 instr) {
     const auto target = (allegrex->getPC() & 0xF0000000) | (getOffset(instr) << 2);
@@ -333,6 +367,42 @@ void iJALR(Allegrex *allegrex, u32 instr) {
     }
 
     allegrex->doBranch(target, true, rd, false);
+}
+
+// Load Byte Unsigned
+void iLBU(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] LBU %s, 0x%X(%s); %s = [0x%08X]\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], regNames[rt], addr);
+    }
+
+    allegrex->set(rt, allegrex->read8(addr));
+}
+
+// Load Halfword
+void iLH(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] LH %s, 0x%X(%s); %s = [0x%08X]\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], regNames[rt], addr);
+    }
+
+    if (addr & 1) {
+        std::printf("Misaligned %s LH address 0x%08X, PC: 0x%08X\n", allegrex->getTypeName(), addr, cpc);
+
+        exit(0);
+    }
+
+    allegrex->set(rt, (i16)allegrex->read16(addr));
 }
 
 // Load Halfword Unsigned
@@ -476,6 +546,28 @@ void iORI(Allegrex *allegrex, u32 instr) {
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] ORI %s, %s, 0x%X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
     }
+}
+
+// Store Halfword
+void iSH(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+    const auto data = (u16)allegrex->get(rt);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SH %s, 0x%X(%s); [0x%08X] = 0x%04X\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], addr, data);
+    }
+
+    if (addr & 1) {
+        std::printf("Misaligned %s SH address 0x%08X, PC: 0x%08X\n", allegrex->getTypeName(), addr, cpc);
+
+        exit(0);
+    }
+
+    allegrex->write16(addr, data);
 }
 
 // Shift Left Logical
@@ -663,6 +755,9 @@ i64 doInstr(Allegrex *allegrex) {
                 }
             }
             break;
+        case Opcode::J:
+            iJ(allegrex, instr);
+            break;
         case Opcode::JAL:
             iJAL(allegrex, instr);
             break;
@@ -711,6 +806,9 @@ i64 doInstr(Allegrex *allegrex) {
                 }
             }
             break;
+        case Opcode::BNEL:
+            iBNEL(allegrex, instr);
+            break;
         case Opcode::SPECIAL3:
             {
                 const auto funct = getFunct(instr);
@@ -726,11 +824,20 @@ i64 doInstr(Allegrex *allegrex) {
                 }
             }
             break;
+        case Opcode::LH:
+            iLH(allegrex, instr);
+            break;
         case Opcode::LW:
             iLW(allegrex, instr);
             break;
+        case Opcode::LBU:
+            iLBU(allegrex, instr);
+            break;
         case Opcode::LHU:
             iLHU(allegrex, instr);
+            break;
+        case Opcode::SH:
+            iSH(allegrex, instr);
             break;
         case Opcode::SW:
             iSW(allegrex, instr);
