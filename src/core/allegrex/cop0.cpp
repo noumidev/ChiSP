@@ -69,6 +69,10 @@ u32 COP0::getStatus(int idx) {
     switch ((StatusReg)idx) {
         case StatusReg::Config:
             return CONFIG;
+        case StatusReg::TagLo:
+            return tagLo;
+        case StatusReg::TagHi:
+            return tagHi;
         default:
             std::printf("Unhandled %s status read @ %d\n", cop0Name[cpuID], idx);
 
@@ -85,7 +89,10 @@ void COP0::setStatus(int idx, u32 data) {
             cause = data;
             break;
         case StatusReg::TagLo:
+            tagLo = data;
+            break;
         case StatusReg::TagHi:
+            tagHi = data;
             break;
         default:
             std::printf("Unhandled %s status write @ %d = 0x%08X\n", cop0Name[cpuID], idx, data);

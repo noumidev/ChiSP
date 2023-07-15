@@ -21,6 +21,7 @@ private:
     // Status
     u32 cpuID;
     u32 status, cause;
+    u32 tagLo, tagHi;
 
     // Control
     u32 v0;
