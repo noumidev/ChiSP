@@ -42,6 +42,7 @@ enum class Opcode {
     JAL  = 0x03,
     BEQ  = 0x04,
     BNE  = 0x05,
+    BLEZ  = 0x06,
     BGTZ  = 0x07,
     ADDIU = 0x09,
     SLTI  = 0x0A,
@@ -78,12 +79,20 @@ enum class SPECIAL {
     OR  = 0x25,
     XOR = 0x26,
     NOR = 0x27,
+    SLT  = 0x2A,
+    SLTU = 0x2B,
     MAX = 0x2C,
+    MIN = 0x2D,
 };
 
 enum class SPECIAL3 {
     EXT = 0x00,
     INS = 0x04,
+    BSHFL = 0x20,
+};
+
+enum class BSHFL {
+    BITREV = 0x14,
 };
 
 enum class REGIMM {
@@ -239,6 +248,41 @@ void iBGTZ(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] BGTZ %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
+// BIT REVerse
+void iBITREV(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+
+    const auto t = allegrex->get(rt);
+
+    u32 data = 0;
+    for (int i = 0; i < 32; i++) {
+        if (t & (1 << i)) data |= 1 << (32 - i);
+    }
+
+    allegrex->set(rd, data);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BITREV %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
+// Branch if Less than or Equal Zero
+void iBLEZ(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s <= 0, Reg::R0, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BLEZ %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
     }
 }
 
@@ -563,6 +607,23 @@ void iMFC(Allegrex *allegrex, int copN, u32 instr) {
     }
 }
 
+/* MINimum */
+void iMIN(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    if ((i32)allegrex->get(rs) < (i32)allegrex->get(rt)) {
+        allegrex->set(rd, allegrex->get(rs));
+    } else {
+        allegrex->set(rd, allegrex->get(rt));
+    }
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MIN %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 /* MOVe if Not zero */
 void iMOVN(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -711,6 +772,19 @@ void iSLLV(Allegrex *allegrex, u32 instr) {
     }
 }
 
+/* Set on Less Than */
+void iSLT(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, (i32)allegrex->get(rs) < (i32)allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SLT %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 // Set on Less Than Immediate
 void iSLTI(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -734,6 +808,19 @@ void iSLTIU(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] SLTIU %s, %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
+    }
+}
+
+/* Set on Less Than Unsigned */
+void iSLTU(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, allegrex->get(rs) < allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SLTU %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
     }
 }
 
@@ -907,8 +994,17 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::NOR:
                         iNOR(allegrex, instr);
                         break;
+                    case SPECIAL::SLT:
+                        iSLT(allegrex, instr);
+                        break;
+                    case SPECIAL::SLTU:
+                        iSLTU(allegrex, instr);
+                        break;
                     case SPECIAL::MAX:
                         iMAX(allegrex, instr);
+                        break;
+                    case SPECIAL::MIN:
+                        iMIN(allegrex, instr);
                         break;
                     default:
                         std::printf("Unhandled %s SPECIAL instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, instr, cpc);
@@ -943,6 +1039,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::BNE:
             iBNE(allegrex, instr);
+            break;
+        case Opcode::BLEZ:
+            iBLEZ(allegrex, instr);
             break;
         case Opcode::BGTZ:
             iBGTZ(allegrex, instr);
@@ -1002,6 +1101,21 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case SPECIAL3::INS:
                         iINS(allegrex, instr);
+                        break;
+                    case SPECIAL3::BSHFL:
+                        {
+                            const auto shamt = getShamt(instr);
+
+                            switch ((BSHFL)shamt) {
+                                case BSHFL::BITREV:
+                                    iBITREV(allegrex, instr);
+                                    break;
+                                default:
+                                    std::printf("Unhandled BSHFL instruction 0x%02X (0x%08X) @ 0x%08X\n", shamt, instr, cpc);
+
+                                    exit(0);
+                            }
+                        }
                         break;
                     default:
                         std::printf("Unhandled %s SPECIAL3 instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, instr, cpc);
