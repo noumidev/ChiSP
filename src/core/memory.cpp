@@ -22,8 +22,9 @@ namespace psp::memory {
 std::array<u8, (u64)MemorySize::BootROM> bootROM;
 std::array<u8, (u64)MemorySize::SPRAM> spram;
 std::array<u8, (u64)MemorySize::EDRAM> edram;
+std::array<u8, (u64)MemorySize::BootROM> iram;
 
-u8 *resetVector = bootROM.data(), *iram;
+u8 *resetVector = bootROM.data();
 
 // Returns true if addr is in the range base,(base + size)
 bool inRange(u64 addr, u64 base, u64 size) {
@@ -34,14 +35,12 @@ void init(const char *bootPath) {
     std::printf("[Memory  ] Loading boot ROM \"%s\"\n", bootPath);
     assert(loadFile(bootPath, bootROM.data(), (u64)MemorySize::BootROM));
 
-    iram = (u8 *)std::malloc((u64)MemorySize::BootROM); // Extra scratchpad RAM
-
     std::puts("[Memory  ] OK");
 }
 
 u8 *getMemoryPointer(u32 addr) {
-    if ((iram != NULL) && inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
-        return iram;
+    if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+        return iram.data();
     } else {
         switch (addr) {
             default:
@@ -61,7 +60,7 @@ u8 read8(u32 addr) {
         return edram[addr & ((u32)MemorySize::EDRAM - 1)];
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         return resetVector[addr & ((u32)MemorySize::BootROM - 1)];
-    } else if ((iram != NULL) && inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+    } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
         return iram[addr & ((u32)MemorySize::BootROM - 1)];
     } else {
         switch (addr) {
@@ -84,7 +83,7 @@ u16 read16(u32 addr) {
         std::memcpy(&data, &edram[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &resetVector[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u16));
-    } else if ((iram != NULL) && inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+    } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &iram[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u16));
     } else {
         switch (addr) {
@@ -117,7 +116,7 @@ u32 read32(u32 addr) {
         return gpio::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &resetVector[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u32));
-    } else if ((iram != NULL) && inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+    } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &iram[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::NANDBuffer, (u64)MemorySize::NANDBuffer)) {
         return nand::readBuffer32(addr);
@@ -145,7 +144,7 @@ void write8(u32 addr, u8 data) {
         edram[addr & ((u32)MemorySize::EDRAM - 1)] = data;
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         resetVector[addr & ((u32)MemorySize::BootROM - 1)] = data;
-    } else if ((iram != NULL) && inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+    } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
         iram[addr & ((u32)MemorySize::BootROM - 1)] = data;
     } else {
         switch (addr) {
@@ -166,7 +165,7 @@ void write16(u32 addr, u16 data) {
         std::memcpy(&edram[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&resetVector[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u16));
-    } else if ((iram != NULL) && inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+    } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
         std::memcpy(&iram[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u16));
     } else {
         switch (addr) {
@@ -195,7 +194,7 @@ void write32(u32 addr, u32 data) {
         return gpio::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&resetVector[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u32));
-    } else if ((iram != NULL) && inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+    } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
         std::memcpy(&iram[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u32));
     } else {
         switch (addr) {
@@ -211,6 +210,10 @@ void write32(u32 addr, u32 data) {
                 exit(0);
         }
     }
+}
+
+void unmapBootROM() {
+    resetVector = iram.data();
 }
 
 }

@@ -48,4 +48,6 @@ void write32(u32 addr, u32 data);
 
 // TODO: MediaEngine read/write handlers
 
+void unmapBootROM();
+
 }
