@@ -54,6 +54,18 @@ void Allegrex::init(Type type) {
     std::printf("[%s] OK\n", typeNames[(int)type]);
 }
 
+void Allegrex::reset() {
+    // Clear all GPRs and delay slot helpers
+    std::memset(regs, 0, sizeof(regs));
+
+    inDelaySlot[0] = inDelaySlot[1] = false;
+
+    // Set initial PC
+    setPC(BOOT_EXCEPTION_BASE);
+
+    std::printf("[%s] Reset OK\n", typeNames[(int)type]);
+}
+
 const char *Allegrex::getTypeName() {
     return typeNames[(int)type];
 }

@@ -20,6 +20,7 @@ enum class Type {
 // Allegrex CPU structure
 struct Allegrex {
     void init(Type type);
+    void reset();
 
     const char *getTypeName();
 
