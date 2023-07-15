@@ -27,6 +27,12 @@ void init(const char *bootPath, const char *nandPath) {
     std::puts("[PSP     ] OK");
 }
 
+void resetCPU() {
+    cpu.reset();
+
+    memory::unmapBootROM();
+}
+
 void run() {
     while (true) {
         interpreter::run(&cpu, 128);
