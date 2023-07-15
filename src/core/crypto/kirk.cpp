@@ -24,6 +24,7 @@ constexpr u64 KHEADER_SIZE = 0x60;
 constexpr u64 MHEADER_SIZE = 0x30;
 
 constexpr u8 AES_MASTER_KEY[] = {0x98, 0xC9, 0x40, 0x97, 0x5C, 0x1D, 0x10, 0xE8, 0x7F, 0xE6, 0x0E, 0xA3, 0xFD, 0x03, 0xA8, 0xBA};
+constexpr u8 AES_ZERO_IV[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 enum class KIRKReg {
     PHASE = 0x1DE0000C,
@@ -69,10 +70,10 @@ u32 status;
 // Buffer addresses
 u32 srcAddr, dstAddr;
 
-// Decrypt data with AES (ECB)
+// Decrypt data with AES (CBC with 0 IV)
 void kirkDecryptAES(const u8 *key, u8 *data, u64 size) {
     // Set up AES engine
-    auto aes = CryptoPP::ECB_Mode<CryptoPP::AES>::Decryption(key, KEY_SIZE);    
+    auto aes = CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption(key, KEY_SIZE, AES_ZERO_IV);    
 
     aes.ProcessData(data, data, size);
 }
@@ -138,6 +139,8 @@ void cmdDecryptPrivate() {
         for (u64 i = 0; i < mHeader.dataLength; i += 16) {
             std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&data[i], *(u32 *)&data[i + 4], *(u32 *)&data[i + 8], *(u32 *)&data[i + 12]);
         }
+
+        // TODO: verify CMAC?
 
         std::memcpy(dstBuffer, data, mHeader.dataLength);
     } else if (mHeader.version == 1) {
