@@ -19,6 +19,7 @@ const char *cop0Name[] = {
 enum class ControlReg {
     V0 = 0x04,
     ErrorHandler = 0x09,
+    Unknown17 = 0x11,
 };
 
 enum class StatusReg {
@@ -51,6 +52,9 @@ void COP0::setControl(int idx, u32 data) {
             break;
         case ControlReg::ErrorHandler:
             errorHandler = data;
+            break;
+        case ControlReg::Unknown17:
+            unknown17 = data;
             break;
         default:
             std::printf("Unhandled %s control write @ %d = 0x%08X\n", cop0Name[cpuID], idx, data);

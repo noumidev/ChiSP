@@ -24,6 +24,7 @@ private:
     // Control
     u32 v0;
     u32 errorHandler;
+    u32 unknown17;
 };
 
 }
