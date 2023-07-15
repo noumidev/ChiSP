@@ -27,7 +27,7 @@ u32 nmien;
 u32 busclken, gpioclken;
 
 // Enable
-u32 reseten = -1, ioen, gpioen;
+u32 reseten, ioen, gpioen;
 
 u32 pllfreq;
 
