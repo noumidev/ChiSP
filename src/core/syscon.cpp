@@ -8,10 +8,13 @@
 #include <cassert>
 #include <cstdio>
 
+#include "psp.hpp"
+
 namespace psp::syscon {
 
 enum class SysConReg {
     NMIEN = 0x1C100000,
+    NMIFLAG = 0x1C100004,
     RESETEN = 0x1C10004C,
     BUSCLKEN  = 0x1C100050,
     GPIOCLKEN = 0x1C100058,
@@ -21,7 +24,7 @@ enum class SysConReg {
 };
 
 // NMI registers
-u32 nmien;
+u32 nmien, nmiflag;
 
 // Clock registers
 u32 busclken, gpioclken;
@@ -70,10 +73,17 @@ u32 read(u32 addr) {
 
 void write(u32 addr, u32 data) {
     switch ((SysConReg)addr) {
+        case SysConReg::NMIFLAG:
+            std::printf("[SysCon  ] Write @ NMIFLAG = 0x%08X\n", data);
+
+            nmiflag &= ~data;
+            break;
         case SysConReg::RESETEN:
             std::printf("[SysCon  ] Write @ RESETEN = 0x%08X\n", data);
 
             reseten = data;
+
+            if (data & 2) resetCPU();
             break;
         case SysConReg::BUSCLKEN:
             std::printf("[SysCon  ] Write @ BUSCLKEN = 0x%08X\n", data);
