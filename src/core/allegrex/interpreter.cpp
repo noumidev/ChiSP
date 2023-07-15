@@ -59,6 +59,7 @@ enum class Opcode {
     LW  = 0x23,
     LBU = 0x24,
     LHU = 0x25,
+    SB  = 0x28,
     SH  = 0x29,
     SW  = 0x2B,
     CACHE = 0x2F,
@@ -67,12 +68,14 @@ enum class Opcode {
 enum class SPECIAL {
     SLL  = 0x00,
     SRL  = 0x02,
+    SRA  = 0x03,
     SLLV = 0x04,
     SRLV = 0x06,
     JR = 0x08,
     JALR = 0x09,
     MOVN = 0x0B,
     SYNC = 0x0F,
+    CLZ  = 0x16,
     ADDU = 0x21,
     SUBU = 0x23,
     AND = 0x24,
@@ -97,6 +100,8 @@ enum class BSHFL {
 
 enum class REGIMM {
     BLTZ = 0x00,
+    BGEZ = 0x01,
+    BLTZAL = 0x10,
 };
 
 enum class COPOpcode {
@@ -235,6 +240,22 @@ void iBEQL(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Branch if Greater than or Equal Zero
+void iBGEZ(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s >= 0, Reg::R0, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BGEZ %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
 // Branch if Greater Than Zero
 void iBGTZ(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -260,7 +281,7 @@ void iBITREV(Allegrex *allegrex, u32 instr) {
 
     u32 data = 0;
     for (int i = 0; i < 32; i++) {
-        if (t & (1 << i)) data |= 1 << (32 - i);
+        if (t & (1 << i)) data |= 1 << (31 - i);
     }
 
     allegrex->set(rd, data);
@@ -299,6 +320,22 @@ void iBLTZ(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] BLTZ %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
+// Branch if Less Than Zero And Link
+void iBLTZAL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s < 0, Reg::RA, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BLTZAL %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
     }
 }
 
@@ -346,6 +383,29 @@ void iCACHE(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] CACHE 0x%X, 0x%X(%s)\n", allegrex->getTypeName(), cpc, rt, imm, regNames[rs]);
+    }
+}
+
+/* Count Leading Zeroes */
+void iCLZ(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+
+    const auto s = allegrex->get(rs);
+
+    u32 count = 32;
+    for (int i = 31; i >= 0; i--) {
+        if (s & (1 << i)) {
+            count = 31 - i;
+
+            break;
+        }
+    }
+
+    allegrex->set(rd, count);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] CLZ %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rd], allegrex->get(rd));
     }
 }
 
@@ -720,6 +780,22 @@ void iROTRV(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Store Byte
+void iSB(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+    const auto data = (u8)allegrex->get(rt);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SB %s, 0x%X(%s); [0x%08X] = 0x%02X\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], addr, data);
+    }
+
+    allegrex->write16(addr, data);
+}
+
 // Store Halfword
 void iSH(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -821,6 +897,19 @@ void iSLTU(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] SLTU %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
+// Shift Right Arithmetic
+void iSRA(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+    const auto shamt = getShamt(instr);
+
+    allegrex->set(rd, (i32)allegrex->get(rt) >> shamt);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SRA %s, %s, %u; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], shamt, regNames[rd], allegrex->get(rd));
     }
 }
 
@@ -943,6 +1032,9 @@ i64 doInstr(Allegrex *allegrex) {
                             }
                         }
                         break;
+                    case SPECIAL::SRA:
+                        iSRA(allegrex, instr);
+                        break;
                     case SPECIAL::SLLV:
                         iSLLV(allegrex, instr);
                         break;
@@ -975,6 +1067,9 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case SPECIAL::SYNC:
                         iSYNC(allegrex, instr);
+                        break;
+                    case SPECIAL::CLZ:
+                        iCLZ(allegrex, instr);
                         break;
                     case SPECIAL::ADDU:
                         iADDU(allegrex, instr);
@@ -1020,6 +1115,12 @@ i64 doInstr(Allegrex *allegrex) {
                 switch ((REGIMM)rt) {
                     case REGIMM::BLTZ:
                         iBLTZ(allegrex, instr);
+                        break;
+                    case REGIMM::BGEZ:
+                        iBGEZ(allegrex, instr);
+                        break;
+                    case REGIMM::BLTZAL:
+                        iBLTZAL(allegrex, instr);
                         break;
                     default:
                         std::printf("Unhandled %s REGIMM instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rt, instr, cpc);
@@ -1138,6 +1239,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::LHU:
             iLHU(allegrex, instr);
+            break;
+        case Opcode::SB:
+            iSB(allegrex, instr);
             break;
         case Opcode::SH:
             iSH(allegrex, instr);
