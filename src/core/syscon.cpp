@@ -12,9 +12,12 @@
 
 namespace psp::syscon {
 
+constexpr u32 TACHYON_VERSION = 0x40000001;
+
 enum class SysConReg {
     NMIEN = 0x1C100000,
     NMIFLAG = 0x1C100004,
+    RAMSIZE = 0x1C100040,
     RESETEN = 0x1C10004C,
     BUSCLKEN  = 0x1C100050,
     GPIOCLKEN = 0x1C100058,
@@ -44,7 +47,7 @@ u32 busclken, gpioclken;
 // Enable
 u32 reseten, ioen, gpioen;
 
-u32 pllfreq, spiclk;
+u32 ramsize = TACHYON_VERSION, pllfreq, spiclk;
 
 // Serial registers
 u32 serialflags;
@@ -55,6 +58,10 @@ u32 read(u32 addr) {
             std::puts("[SysCon  ] Read @ NMIEN");
 
             return nmien;
+        case SysConReg::RAMSIZE:
+            std::puts("[SysCon  ] Read @ RAMSIZE");
+
+            return ramsize;
         case SysConReg::RESETEN:
             std::puts("[SysCon  ] Read @ RESETEN");
 
@@ -113,6 +120,11 @@ void write(u32 addr, u32 data) {
             std::printf("[SysCon  ] Write @ NMIFLAG = 0x%08X\n", data);
 
             nmiflag &= ~data;
+            break;
+        case SysConReg::RAMSIZE:
+            std::printf("[SysCon  ] Write @ RAMSIZE = 0x%08X\n", data);
+
+            ramsize = data;
             break;
         case SysConReg::RESETEN:
             std::printf("[SysCon  ] Write @ RESETEN = 0x%08X\n", data);
