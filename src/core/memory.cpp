@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "ddr.hpp"
 #include "gpio.hpp"
 #include "nand.hpp"
 #include "syscon.hpp"
@@ -87,6 +88,9 @@ u16 read16(u32 addr) {
         std::memcpy(&data, &iram[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u16));
     } else {
         switch (addr) {
+            case 0x11800000: // IPL checks for string "MS"
+                std::printf("[Memory  ] Unknown read16 @ 0x%08X\n", addr);
+                return 0;
             default:
                 std::printf("Unhandled read16 @ 0x%08X\n", addr);
 
@@ -108,6 +112,8 @@ u32 read32(u32 addr) {
         std::memcpy(&data, &edram[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
+        return ddr::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
         return nand::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
@@ -188,6 +194,8 @@ void write32(u32 addr, u32 data) {
         std::memcpy(&edram[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
+        return ddr::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
         return nand::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
