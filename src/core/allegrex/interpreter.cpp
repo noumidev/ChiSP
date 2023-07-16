@@ -49,6 +49,7 @@ enum class Opcode {
     SLTIU = 0x0B,
     ANDI = 0x0C,
     ORI  = 0x0D,
+    XORI = 0x0E,
     LUI  = 0x0F,
     COP0 = 0x10,
     BEQL = 0x14,
@@ -73,6 +74,7 @@ enum class SPECIAL {
     SRLV = 0x06,
     JR = 0x08,
     JALR = 0x09,
+    MOVZ = 0x0A,
     MOVN = 0x0B,
     SYNC = 0x0F,
     CLZ  = 0x16,
@@ -697,6 +699,19 @@ void iMOVN(Allegrex *allegrex, u32 instr) {
     }
 }
 
+/* MOVe if Zero */
+void iMOVZ(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    if (!allegrex->get(rt)) allegrex->set(rd, allegrex->get(rs));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MOVZ %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 // Move To Coprocessor
 void iMTC(Allegrex *allegrex, int copN, u32 instr) {
     assert((copN >= 0) && (copN < 4));
@@ -996,6 +1011,19 @@ void iXOR(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// XOR Immediate
+void iXORI(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = getImm(instr);
+
+    allegrex->set(rt, allegrex->get(rs) ^ imm);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] XORI %s, %s, 0x%X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
+    }
+}
+
 i64 doInstr(Allegrex *allegrex) {
     const auto instr = allegrex->read32(cpc);
 
@@ -1061,6 +1089,9 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case SPECIAL::JALR:
                         iJALR(allegrex, instr);
+                        break;
+                    case SPECIAL::MOVZ:
+                        iMOVZ(allegrex, instr);
                         break;
                     case SPECIAL::MOVN:
                         iMOVN(allegrex, instr);
@@ -1161,6 +1192,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::ORI:
             iORI(allegrex, instr);
+            break;
+        case Opcode::XORI:
+            iXORI(allegrex, instr);
             break;
         case Opcode::LUI:
             iLUI(allegrex, instr);
