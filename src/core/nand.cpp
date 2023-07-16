@@ -34,6 +34,7 @@ enum class NANDReg {
 };
 
 enum class NANDCommand {
+    READ2 = 0x50,
     READ_STATUS = 0x70,
     READ_ID = 0x90,
     RESET = 0xFF,
@@ -43,6 +44,11 @@ enum class NANDStatus {
     ERASE_ERROR  = 1 << 0,
     DEVICE_READY = 1 << 6,
     WRITE_PROTECT = 1 << 7,
+};
+
+enum class NANDState {
+    IDLE,
+    READ_PAGE,
 };
 
 enum STATUS {
@@ -67,6 +73,8 @@ u32 status, nandpage, dmapage, dmactrl, dmaintr;
 
 u8 deviceStatus; // NAND chip status
 
+NANDState state = NANDState::IDLE;
+
 void setSerialSize(u32 size) {
     serialSize = size;
     serialIdx  = 0;
@@ -82,6 +90,11 @@ u32 getSerialData() {
 
 void doCommand(u8 cmd) {
     switch ((NANDCommand)cmd) {
+        case NANDCommand::READ2:
+            std::puts("[NAND    ] Read (2)");
+
+            state = NANDState::READ_PAGE; // Next write to PAGE triggers a read
+            break;
         case NANDCommand::READ_STATUS:
             std::puts("[NAND    ] Read Status");
 
@@ -176,6 +189,15 @@ void write(u32 addr, u32 data) {
             std::printf("[NAND    ] Write @ PAGE = 0x%08X\n", data);
 
             nandpage = (data >> 10) & 0x1FFFF;
+
+            if (state == NANDState::READ_PAGE) {
+                std::printf("[NAND    ] Reading page 0x%X\n", nandpage);
+
+                std::memcpy(&serialData[0], &nand[PAGE_SIZE_ECC * nandpage], PAGE_SIZE);
+                setSerialSize(PAGE_SIZE);
+
+                state = NANDState::IDLE;
+            }
             break;
         case NANDReg::RESET:
             std::printf("[NAND    ] Write @ RESET = 0x%08X\n", data);
