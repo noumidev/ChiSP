@@ -101,8 +101,9 @@ enum class BSHFL {
 };
 
 enum class REGIMM {
-    BLTZ = 0x00,
-    BGEZ = 0x01,
+    BLTZ  = 0x00,
+    BGEZ  = 0x01,
+    BLTZL = 0x02,
     BLTZAL = 0x10,
 };
 
@@ -338,6 +339,22 @@ void iBLTZAL(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] BLTZAL %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
+// Branch if Less Than Zero Likely
+void iBLTZL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s < 0, Reg::R0, true);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BLTZL %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
     }
 }
 
@@ -1149,6 +1166,9 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case REGIMM::BGEZ:
                         iBGEZ(allegrex, instr);
+                        break;
+                    case REGIMM::BLTZL:
+                        iBLTZL(allegrex, instr);
                         break;
                     case REGIMM::BLTZAL:
                         iBLTZAL(allegrex, instr);
