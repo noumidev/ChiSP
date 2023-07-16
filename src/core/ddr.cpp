@@ -30,6 +30,10 @@ u32 read(u32 addr) {
             std::printf("[DDR     ] Unknown read @ 0x%08X\n", addr);
 
             return unknown[3];
+        case DDRReg::UNKNOWN6:
+            std::printf("[DDR     ] Unknown read @ 0x%08X\n", addr);
+
+            return unknown[6];
         default:
             std::printf("[DDR     ] Unhandled read @ 0x%08X\n", addr);
 
@@ -39,15 +43,35 @@ u32 read(u32 addr) {
 
 void write(u32 addr, u32 data) {
     switch ((DDRReg)addr) {
+        case DDRReg::UNKNOWN2:
+            std::printf("[DDR     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            unknown[2] = data;
+            break;
         case DDRReg::UNKNOWN3:
             std::printf("[DDR     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
 
             unknown[3] = data;
             break;
+        case DDRReg::UNKNOWN4:
+            std::printf("[DDR     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            unknown[4] = data;
+            break;
         case DDRReg::UNKNOWN5:
             std::printf("[DDR     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
 
             unknown[5] = data;
+            break;
+        case DDRReg::UNKNOWN6:
+            std::printf("[DDR     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            unknown[6] = data;
+            break;
+        case DDRReg::UNKNOWN7:
+            std::printf("[DDR     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            unknown[7] = data;
             break;
         default:
             std::printf("[DDR     ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
