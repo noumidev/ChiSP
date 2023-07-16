@@ -32,3 +32,10 @@ inline bool loadFile(const char *path, u8 *buf, i64 size) {
 
     return true;
 }
+
+inline void writeFile(const char *path, u8 *buf, u64 size) {
+    const auto file = std::fopen(path, "wb");
+
+    std::fwrite(buf, sizeof(u8), size, file);
+    std::fclose(file);
+}
