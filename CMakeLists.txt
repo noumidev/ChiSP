@@ -15,6 +15,7 @@ add_subdirectory(cryptopp-cmake)
 # Set source and header files
 set(SOURCES
     src/main.cpp
+    src/core/ddr.cpp
     src/core/gpio.cpp
     src/core/memory.cpp
     src/core/nand.cpp
@@ -29,6 +30,7 @@ set(SOURCES
 set(HEADERS
     src/common/file.hpp
     src/common/types.hpp
+    src/core/ddr.hpp
     src/core/gpio.hpp
     src/core/memory.hpp
     src/core/nand.hpp
