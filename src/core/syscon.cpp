@@ -24,6 +24,17 @@ enum class SysConReg {
     GPIOEN = 0x1C10007C,
 };
 
+enum class SysConSerialReg {
+    INIT  = 0x1E580000,
+    DATA  = 0x1E580008,
+    FLAGS = 0x1E58000C,
+    CONTROL  = 0x1E580004,
+    UNKNOWN0 = 0x1E580014,
+    UNKNOWN1 = 0x1E580018,
+    UNKNOWN2 = 0x1E580020,
+    UNKNOWN3 = 0x1E580024,
+};
+
 // NMI registers
 u32 nmien, nmiflag;
 
@@ -34,6 +45,9 @@ u32 busclken, gpioclken;
 u32 reseten, ioen, gpioen;
 
 u32 pllfreq, spiclk;
+
+// Serial registers
+u32 serialflags;
 
 u32 read(u32 addr) {
     switch ((SysConReg)addr) {
@@ -71,6 +85,23 @@ u32 read(u32 addr) {
             return gpioen;
         default:
             std::printf("[SysCon  ] Unhandled read @ 0x%08X\n", addr);
+
+            exit(0);
+    }
+}
+
+u32 readSerial(u32 addr) {
+    switch ((SysConSerialReg)addr) {
+        case SysConSerialReg::FLAGS:
+            std::puts("[SysCon  ] Read @ SERIALFLAGS");
+
+            return serialflags;
+        case SysConSerialReg::UNKNOWN1:
+            std::printf("[SysCon  ] Unknown serial read @ 0x%08X\n", addr);
+
+            return 0;
+        default:
+            std::printf("[SysCon  ] Unhandled serial read @ 0x%08X\n", addr);
 
             exit(0);
     }
@@ -117,6 +148,29 @@ void write(u32 addr, u32 data) {
             break;
         default:
             std::printf("[SysCon  ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
+
+            exit(0);
+    }
+}
+
+void writeSerial(u32 addr, u32 data) {
+    switch ((SysConSerialReg)addr) {
+        case SysConSerialReg::INIT:
+            std::printf("[SysCon  ] Write @ SERIALINIT = 0x%08X\n", data);
+            break;
+        case SysConSerialReg::DATA:
+            std::printf("[SysCon  ] Write @ SERIALDATA = 0x%08X\n", data);
+            break;
+        case SysConSerialReg::CONTROL:
+            std::printf("[SysCon  ] Write @ SERIALCONTROL = 0x%08X\n", data);
+            break;
+        case SysConSerialReg::UNKNOWN0:
+        case SysConSerialReg::UNKNOWN2:
+        case SysConSerialReg::UNKNOWN3:
+            std::printf("[SysCon  ] Unknown serial write @ 0x%08X = 0x%08X\n", addr, data);
+            break;
+        default:
+            std::printf("[SysCon  ] Unhandled serial write @ 0x%08X = 0x%08X\n", addr, data);
 
             exit(0);
     }
