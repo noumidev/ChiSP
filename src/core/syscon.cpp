@@ -18,6 +18,7 @@ enum class SysConReg {
     RESETEN = 0x1C10004C,
     BUSCLKEN  = 0x1C100050,
     GPIOCLKEN = 0x1C100058,
+    SPICLK  = 0x1C100064,
     PLLFREQ = 0x1C100068,
     IOEN = 0x1C100078,
     GPIOEN = 0x1C10007C,
@@ -32,7 +33,7 @@ u32 busclken, gpioclken;
 // Enable
 u32 reseten, ioen, gpioen;
 
-u32 pllfreq;
+u32 pllfreq, spiclk;
 
 u32 read(u32 addr) {
     switch ((SysConReg)addr) {
@@ -52,6 +53,10 @@ u32 read(u32 addr) {
             std::puts("[SysCon  ] Read @ GPIOCLKEN");
 
             return gpioclken;
+        case SysConReg::SPICLK:
+            std::puts("[SysCon  ] Read @ SPICLK");
+
+            return spiclk;
         case SysConReg::PLLFREQ:
             std::puts("[SysCon  ] Read @ PLLFREQ");
 
@@ -94,6 +99,11 @@ void write(u32 addr, u32 data) {
             std::printf("[SysCon  ] Write @ GPIOCLKEN = 0x%08X\n", data);
 
             gpioclken = data;
+            break;
+        case SysConReg::SPICLK:
+            std::printf("[SysCon  ] Write @ SPICLK = 0x%08X\n", data);
+
+            spiclk = data;
             break;
         case SysConReg::IOEN:
             std::printf("[SysCon  ] Write @ IOEN = 0x%08X\n", data);
