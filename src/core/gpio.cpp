@@ -13,11 +13,17 @@ namespace psp::gpio {
 enum class GPIOReg {
     OUTEN = 0x1E240000,
     READ  = 0x1E240004,
+    SET = 0x1E240008,
+    CLEAR = 0x1E24000C,
+    IRQEN = 0x1E24001C,
     INEN  = 0x1E240040,
 };
 
 // GPIO pin enable
 u32 outen, inen;
+
+// GPIO interrupts
+u32 irqen;
 
 u32 read(u32 addr) {
     switch ((GPIOReg)addr) {
@@ -46,6 +52,17 @@ void write(u32 addr, u32 data) {
             std::printf("[GPIO    ] Write @ OUTEN = 0x%08X\n", data);
 
             outen = data;
+            break;
+        case GPIOReg::SET:
+            std::printf("[GPIO    ] Write @ SET = 0x%08X\n", data);
+            break;
+        case GPIOReg::CLEAR:
+            std::printf("[GPIO    ] Write @ CLEAR = 0x%08X\n", data);
+            break;
+        case GPIOReg::IRQEN:
+            std::printf("[GPIO    ] Write @ IRQEN = 0x%08X\n", data);
+
+            irqen = data;
             break;
         case GPIOReg::INEN:
             std::printf("[GPIO    ] Write @ INEN = 0x%08X\n", data);
