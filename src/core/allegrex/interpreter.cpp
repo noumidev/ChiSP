@@ -44,6 +44,7 @@ enum class Opcode {
     BNE  = 0x05,
     BLEZ  = 0x06,
     BGTZ  = 0x07,
+    ADDI  = 0x08,
     ADDIU = 0x09,
     SLTI  = 0x0A,
     SLTIU = 0x0B,
@@ -78,6 +79,7 @@ enum class SPECIAL {
     MOVN = 0x0B,
     SYNC = 0x0F,
     CLZ  = 0x16,
+    DIVU = 0x1B,
     ADDU = 0x21,
     SUBU = 0x23,
     AND = 0x24,
@@ -105,6 +107,7 @@ enum class REGIMM {
     BGEZ  = 0x01,
     BLTZL = 0x02,
     BLTZAL = 0x10,
+    BGEZAL = 0x11,
 };
 
 enum class COPOpcode {
@@ -153,6 +156,27 @@ u32 getRs(u32 instr) {
 // Returns Rt
 u32 getRt(u32 instr) {
     return (instr >> 16) & 0x1F;
+}
+
+// ADD Immediate
+void iADDI(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (u32)(i16)getImm(instr);
+
+    const auto result = (u64)allegrex->get(rs) + (u64)(i32)imm;
+
+    if (((result >> 31) & 1) != ((result >> 32) & 1)) { // ?? Is this a thing on Allegrex?
+        std::puts("ADDI overflow");
+
+        exit(0);
+    }
+
+    allegrex->set(rt, (u32)result);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] ADDI %s, %s, 0x%X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
+    }
 }
 
 // ADD Immediate Unsigned
@@ -256,6 +280,22 @@ void iBGEZ(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] BGEZ %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
+// Branch if Greater than or Equal Zero And Link
+void iBGEZAL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s >= 0, Reg::RA, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BGEZAL %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
     }
 }
 
@@ -451,6 +491,24 @@ void iCTC(Allegrex *allegrex, int copN, u32 instr) {
         std::printf("[%s] [0x%08X] CTC%d %s, %d; %d = 0x%08X\n", allegrex->getTypeName(), cpc, copN, regNames[rt], rd, rd, t);
     }
 }
+
+/* DIVide Unsigned */
+void iDIVU(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto n = allegrex->get(rs);
+    const auto d = allegrex->get(rt);
+
+    assert(d != 0);
+
+    allegrex->set(Reg::LO, n / d);
+    allegrex->set(Reg::HI, n % d);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] DIVU %s, %s; LO = 0x%08X, HI = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], allegrex->get(Reg::LO), allegrex->get(Reg::HI));
+    }
+}   
 
 // Extract
 void iEXT(Allegrex *allegrex, u32 instr) {
@@ -1119,6 +1177,9 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::CLZ:
                         iCLZ(allegrex, instr);
                         break;
+                    case SPECIAL::DIVU:
+                        iDIVU(allegrex, instr);
+                        break;
                     case SPECIAL::ADDU:
                         iADDU(allegrex, instr);
                         break;
@@ -1173,6 +1234,9 @@ i64 doInstr(Allegrex *allegrex) {
                     case REGIMM::BLTZAL:
                         iBLTZAL(allegrex, instr);
                         break;
+                    case REGIMM::BGEZAL:
+                        iBGEZAL(allegrex, instr);
+                        break;
                     default:
                         std::printf("Unhandled %s REGIMM instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rt, instr, cpc);
 
@@ -1197,6 +1261,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::BGTZ:
             iBGTZ(allegrex, instr);
+            break;
+        case Opcode::ADDI:
+            iADDI(allegrex, instr);
             break;
         case Opcode::ADDIU:
             iADDIU(allegrex, instr);
