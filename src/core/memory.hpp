@@ -16,6 +16,7 @@ enum class MemoryBase {
     NAND  = 0x1D101000,
     KIRK  = 0x1DE00000,
     GPIO  = 0x1E240000,
+    SysConSerial = 0x1E580000,
     BootROM = 0x1FC00000,
     IRAM  = 0x1FD00000,
     NANDBuffer = 0x1FF00000,
@@ -25,10 +26,11 @@ enum class MemoryBase {
 enum class MemorySize {
     SPRAM = 0x4000,
     EDRAM = 0x200000,
-    SysCon  = 0xE8,
+    SysCon = 0xE8,
     NAND  = 0x304,
     KIRK  = 0x54,
     GPIO  = 0x4C,
+    SysConSerial = 0x28,
     BootROM = 0x1000,
     NANDBuffer = 0x910,
 };

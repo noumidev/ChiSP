@@ -114,6 +114,8 @@ u32 read32(u32 addr) {
         return kirk::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
+        return syscon::readSerial(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &resetVector[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
@@ -192,6 +194,8 @@ void write32(u32 addr, u32 data) {
         return kirk::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
+        return syscon::writeSerial(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&resetVector[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
