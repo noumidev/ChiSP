@@ -12,6 +12,7 @@
 
 #include "ddr.hpp"
 #include "gpio.hpp"
+#include "i2c.hpp"
 #include "nand.hpp"
 #include "syscon.hpp"
 #include "crypto/kirk.hpp"
@@ -118,6 +119,8 @@ u32 read32(u32 addr) {
         return nand::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::I2C, (u64)MemorySize::I2C)) {
+        return i2c::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
@@ -200,6 +203,8 @@ void write32(u32 addr, u32 data) {
         return nand::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::I2C, (u64)MemorySize::I2C)) {
+        return i2c::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
