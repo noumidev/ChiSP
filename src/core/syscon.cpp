@@ -29,9 +29,9 @@ enum class SysConReg {
 
 enum class SysConSerialReg {
     INIT  = 0x1E580000,
+    CONTROL = 0x1E580004,
     DATA  = 0x1E580008,
     FLAGS = 0x1E58000C,
-    CONTROL  = 0x1E580004,
     UNKNOWN0 = 0x1E580014,
     UNKNOWN1 = 0x1E580018,
     UNKNOWN2 = 0x1E580020,
@@ -170,11 +170,11 @@ void writeSerial(u32 addr, u32 data) {
         case SysConSerialReg::INIT:
             std::printf("[SysCon  ] Write @ SERIALINIT = 0x%08X\n", data);
             break;
-        case SysConSerialReg::DATA:
-            std::printf("[SysCon  ] Write @ SERIALDATA = 0x%08X\n", data);
-            break;
         case SysConSerialReg::CONTROL:
             std::printf("[SysCon  ] Write @ SERIALCONTROL = 0x%08X\n", data);
+            break;
+        case SysConSerialReg::DATA:
+            std::printf("[SysCon  ] Write @ SERIALDATA = 0x%08X\n", data);
             break;
         case SysConSerialReg::UNKNOWN0:
         case SysConSerialReg::UNKNOWN2:
