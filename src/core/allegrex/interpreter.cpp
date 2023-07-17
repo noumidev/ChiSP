@@ -5,6 +5,7 @@
 
 #include "interpreter.hpp"
 
+#include <bit>
 #include <cassert>
 #include <cstdio>
 
@@ -78,6 +79,7 @@ enum class SPECIAL {
     MOVZ = 0x0A,
     MOVN = 0x0B,
     SYNC = 0x0F,
+    MFHI = 0x10,
     CLZ  = 0x16,
     DIVU = 0x1B,
     ADDU = 0x21,
@@ -452,16 +454,11 @@ void iCLZ(Allegrex *allegrex, u32 instr) {
 
     const auto s = allegrex->get(rs);
 
-    u32 count = 32;
-    for (int i = 31; i >= 0; i--) {
-        if (s & (1 << i)) {
-            count = 31 - i;
-
-            break;
-        }
+    if (!s) {
+        allegrex->set(rd, 32);
+    } else {
+        allegrex->set(rd, std::__countl_zero(s));
     }
-
-    allegrex->set(rd, count);
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] CLZ %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rd], allegrex->get(rd));
@@ -707,10 +704,10 @@ void iMAX(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
     const auto rt = getRt(instr);
 
-    if ((i32)allegrex->get(rs) < (i32)allegrex->get(rt)) {
-        allegrex->set(rd, allegrex->get(rt));
-    } else {
+    if ((i32)allegrex->get(rs) > (i32)allegrex->get(rt)) {
         allegrex->set(rd, allegrex->get(rs));
+    } else {
+        allegrex->set(rd, allegrex->get(rt));
     }
 
     if (ENABLE_DISASM) {
@@ -741,6 +738,17 @@ void iMFC(Allegrex *allegrex, int copN, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] MFC%d %s, %d; %s = 0x%08X\n", allegrex->getTypeName(), cpc, copN, regNames[rt], rd, regNames[rt], data);
+    }
+}
+
+/* Move From HI */
+void iMFHI(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+
+    allegrex->set(rd, allegrex->get(Reg::HI));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MFHI %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rd], allegrex->get(rd));
     }
 }
 
@@ -859,11 +867,7 @@ void iROTRV(Allegrex *allegrex, u32 instr) {
     const auto t = allegrex->get(rt);
     const auto shamt = allegrex->get(rs) & 0x1F;
 
-    if (shamt) {
-        allegrex->set(rd, (t >> shamt) | (t << (32 - shamt)));
-    } else {
-        allegrex->set(rd, t);
-    }
+    allegrex->set(rd, std::__rotr(t, shamt));
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] ROTRV %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rs], regNames[rd], allegrex->get(rd));
@@ -968,7 +972,7 @@ void iSLTI(Allegrex *allegrex, u32 instr) {
 void iSLTIU(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
     const auto rt = getRt(instr);
-    const auto imm = getImm(instr);
+    const auto imm = (u32)(i16)getImm(instr);
 
     allegrex->set(rt, allegrex->get(rs) < imm);
 
@@ -1173,6 +1177,9 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case SPECIAL::SYNC:
                         iSYNC(allegrex, instr);
+                        break;
+                    case SPECIAL::MFHI:
+                        iMFHI(allegrex, instr);
                         break;
                     case SPECIAL::CLZ:
                         iCLZ(allegrex, instr);
