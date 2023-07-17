@@ -517,7 +517,9 @@ void iEXT(Allegrex *allegrex, u32 instr) {
     assert((pos + size) <= 32);
 
     // Shift rs by pos, then mask with (1 << size) - 1 (mask is all 1s)
-    allegrex->set(rt, (allegrex->get(rs) >> pos) & ((1llu << size) - 1));
+    const auto mask = 0xFFFFFFFFu >> (32 - size);
+
+    allegrex->set(rt, (allegrex->get(rs) >> pos) & mask);
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] EXT %s, %s, %u, %u; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], pos, size, regNames[rt], allegrex->get(rt));
@@ -528,16 +530,14 @@ void iEXT(Allegrex *allegrex, u32 instr) {
 void iINS(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
     const auto rt = getRt(instr);
+    const auto pos  = getShamt(instr);
+    const auto size = (getRd(instr) + 1) - pos;
 
-    const auto pos = getShamt(instr);
-    const auto size = getRd(instr) - pos + 1;
+    assert(size && (size <= 32));
 
-    assert(size);
+    const auto mask = 0xFFFFFFFFu >> (32 - size);
 
-    const auto mask = (1 << size) - 1;
-    const auto s = allegrex->get(rs) & mask;
-
-    allegrex->set(rt, (allegrex->get(rt) & ~(mask << pos)) | (s << pos));
+    allegrex->set(rt, (allegrex->get(rt) & ~(mask << pos)) | ((allegrex->get(rs) & mask) << pos));
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] INS %s, %s, %u, %u; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], pos, size, regNames[rt], allegrex->get(rt));
