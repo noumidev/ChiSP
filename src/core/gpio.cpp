@@ -34,6 +34,8 @@ u32 irqen, irqstatus;
 // Clock edge detection
 u32 edgedetect, fallingedge, risingedge;
 
+u32 unknown;
+
 u32 read(u32 addr) {
     switch ((GPIOReg)addr) {
         case GPIOReg::OUTEN:
@@ -55,7 +57,7 @@ u32 read(u32 addr) {
         case GPIOReg::UNKNOWN:
             std::printf("[GPIO    ] Unknown read @ 0x%08X\n", addr);
 
-            return 0;
+            return unknown;
         default:
             std::printf("[GPIO    ] Unhandled read @ 0x%08X\n", addr);
 
@@ -108,6 +110,8 @@ void write(u32 addr, u32 data) {
             break;
         case GPIOReg::UNKNOWN:
             std::printf("[GPIO    ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            unknown = data;
             break;
         default:
             std::printf("[GPIO    ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
