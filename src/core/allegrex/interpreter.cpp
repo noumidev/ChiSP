@@ -887,7 +887,7 @@ void iSB(Allegrex *allegrex, u32 instr) {
         std::printf("[%s] [0x%08X] SB %s, 0x%X(%s); [0x%08X] = 0x%02X\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], addr, data);
     }
 
-    allegrex->write16(addr, data);
+    allegrex->write8(addr, data);
 }
 
 // Store Halfword
