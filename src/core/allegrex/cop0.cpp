@@ -67,6 +67,8 @@ void COP0::setControl(int idx, u32 data) {
 
 u32 COP0::getStatus(int idx) {
     switch ((StatusReg)idx) {
+        case StatusReg::Status:
+            return status;
         case StatusReg::Config:
             return CONFIG;
         case StatusReg::TagLo:
