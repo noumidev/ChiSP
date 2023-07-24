@@ -59,12 +59,16 @@ enum class Opcode {
     SPECIAL3 = 0x1F,
     LB  = 0x20,
     LH  = 0x21,
+    LWL = 0x22,
     LW  = 0x23,
     LBU = 0x24,
     LHU = 0x25,
+    LWR = 0x26,
     SB  = 0x28,
     SH  = 0x29,
+    SWL = 0x2A,
     SW  = 0x2B,
+    SWR = 0x2E,
     CACHE = 0x2F,
 };
 
@@ -699,6 +703,44 @@ void iLW(Allegrex *allegrex, u32 instr) {
     allegrex->set(rt, allegrex->read32(addr));
 }
 
+/* Load Word Left */
+void iLWL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] LWL %s, 0x%X(%s); %s = [0x%08X]\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], regNames[rt], addr);
+    }
+
+    const auto shift = 24 - 8 * (addr & 3);
+    const auto mask = ~(~0 << shift);
+
+    allegrex->set(rt, (allegrex->get(rt) & mask) | (allegrex->read32(addr & ~3) << shift));
+}
+
+/* Load Word Right */
+void iLWR(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] LWR %s, 0x%X(%s); %s = [0x%08X]\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], regNames[rt], addr);
+    }
+
+    const auto shift = 8 * (addr & 3);
+    const auto mask = 0xFFFFFF00 << (24 - shift);
+
+    allegrex->set(rt, (allegrex->get(rt) & mask) | (allegrex->read32(addr & ~3) >> shift));
+}
+
 /* MAX */
 void iMAX(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -1081,6 +1123,48 @@ void iSW(Allegrex *allegrex, u32 instr) {
     allegrex->write32(addr, data);
 }
 
+/* Store Word Left */
+void iSWL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    const auto shift = 8 * (addr & 3);
+    const auto mask  = 0xFFFFFF00 << shift;
+
+    const auto data = (allegrex->read32(addr & ~3) & mask) | (allegrex->get(rt) >> (24 - shift));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SWL %s, 0x%X(%s); [0x%08X] = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], addr, data);
+    }
+
+    allegrex->write32(addr & ~3, data);
+}
+
+/* Store Word Right */
+void iSWR(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    const auto shift = 8 * (addr & 3);
+    const auto mask  = ~(~0 << shift);
+
+    const auto data = (allegrex->read32(addr & ~3) & mask) | (allegrex->get(rt) << shift);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SWR %s, 0x%X(%s); [0x%08X] = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], addr, data);
+    }
+
+    allegrex->write32(addr & ~3, data);
+}
+
 // SYNC
 void iSYNC(Allegrex *allegrex, u32 instr) {
     (void)instr;
@@ -1375,6 +1459,9 @@ i64 doInstr(Allegrex *allegrex) {
         case Opcode::LH:
             iLH(allegrex, instr);
             break;
+        case Opcode::LWL:
+            iLWL(allegrex, instr);
+            break;
         case Opcode::LW:
             iLW(allegrex, instr);
             break;
@@ -1384,14 +1471,23 @@ i64 doInstr(Allegrex *allegrex) {
         case Opcode::LHU:
             iLHU(allegrex, instr);
             break;
+        case Opcode::LWR:
+            iLWR(allegrex, instr);
+            break;
         case Opcode::SB:
             iSB(allegrex, instr);
             break;
         case Opcode::SH:
             iSH(allegrex, instr);
             break;
+        case Opcode::SWL:
+            iSWL(allegrex, instr);
+            break;
         case Opcode::SW:
             iSW(allegrex, instr);
+            break;
+        case Opcode::SWR:
+            iSWR(allegrex, instr);
             break;
         case Opcode::CACHE:
             iCACHE(allegrex, instr);
