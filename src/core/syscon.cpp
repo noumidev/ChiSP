@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <queue>
 
+#include "gpio.hpp"
 #include "psp.hpp"
 
 namespace psp::syscon {
@@ -109,9 +110,8 @@ void clearTxQueue() {
 }
 
 void writeResponse(u8 len) {
-    txQueue.push(0);
     txQueue.push(len);
-    txQueue.push(0);
+    txQueue.push(0x82); // Maybe??
 }
 
 // Reads a 32-bit syscon register
@@ -184,6 +184,8 @@ void doCommand() {
     const auto cmd = getTxQueue();
     const auto len = getTxQueue();
 
+    rxQueue.push(cmd); // ??
+
     switch ((SysConCommand)cmd) {
         case SysConCommand::GET_BARYON_VERSION:
             commonRead(SysConCommand::GET_BARYON_VERSION);
@@ -212,6 +214,8 @@ void doCommand() {
     if (!rxQueue.empty()) {
         serialflags |= 1 << 2;
     }
+
+    gpio::sendIRQ(gpio::GPIOInterrupt::SysCon);
 }
 
 u32 read(u32 addr) {
