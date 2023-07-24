@@ -110,8 +110,8 @@ void clearTxQueue() {
 }
 
 void writeResponse(u8 len) {
-    txQueue.push(len);
-    txQueue.push(0x82); // Maybe??
+    rxQueue.push(len + 3); // Header + RX data
+    rxQueue.push(0x82);    // Maybe??
 }
 
 // Reads a 32-bit syscon register
@@ -179,6 +179,26 @@ void cmdReadScratchpad() {
     }
 }
 
+// Calculates and pushes response hash
+void pushRxHash() {
+    // Swap contents of RX queue with temporary queue
+    std::queue<u8> temp;
+    temp.swap(rxQueue);
+
+    // Hash = ~(sum of all elements) & 0xFF
+    u8 hash = 0;
+    while (!temp.empty()) {
+        const auto data = temp.front(); temp.pop();
+
+        hash += data;
+
+        // Push data back to rxQueue
+        rxQueue.push(data);
+    }
+
+    rxQueue.push(~hash);
+}
+
 // HLE SysCon commands
 void doCommand() {
     const auto cmd = getTxQueue();
@@ -211,9 +231,9 @@ void doCommand() {
             exit(0);
     }
 
-    if (!rxQueue.empty()) {
-        serialflags |= 1 << 2;
-    }
+    pushRxHash();
+
+    serialflags |= 1 << 2;
 
     gpio::sendIRQ(gpio::GPIOInterrupt::SysCon);
 }
