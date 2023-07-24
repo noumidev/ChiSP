@@ -12,6 +12,7 @@ namespace psp::memory {
 enum class MemoryBase {
     SPRAM = 0x00010000,
     EDRAM = 0x04000000,
+    DRAM  = 0x08000000,
     SysCon  = 0x1C100000,
     DDR = 0x1D000000,
     NAND  = 0x1D101000,
@@ -28,6 +29,7 @@ enum class MemoryBase {
 enum class MemorySize {
     SPRAM = 0x4000,
     EDRAM = 0x200000,
+    DRAM  = 0x2000000,
     SysCon = 0xE8,
     DDR = 0x48,
     NAND  = 0x304,

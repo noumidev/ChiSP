@@ -24,6 +24,7 @@ namespace psp::memory {
 std::array<u8, (u64)MemorySize::BootROM> bootROM;
 std::array<u8, (u64)MemorySize::SPRAM> spram;
 std::array<u8, (u64)MemorySize::EDRAM> edram;
+std::array<u8, (u64)MemorySize::DRAM>  dram;
 std::array<u8, (u64)MemorySize::BootROM> iram;
 
 u8 *resetVector = bootROM.data();
@@ -41,8 +42,10 @@ void init(const char *bootPath) {
 }
 
 u8 *getMemoryPointer(u32 addr) {
-    if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
-        return iram.data();
+    if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        return &dram[addr & ((u32)MemorySize::DRAM - 1)];
+    } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
+        return &iram[addr & ((u32)MemorySize::BootROM - 1)];
     } else {
         switch (addr) {
             default:
@@ -60,6 +63,8 @@ u8 read8(u32 addr) {
         return spram[addr & ((u32)MemorySize::SPRAM - 1)];
     } else if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
         return edram[addr & ((u32)MemorySize::EDRAM - 1)];
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        return dram[addr & ((u32)MemorySize::DRAM - 1)];
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         return resetVector[addr & ((u32)MemorySize::BootROM - 1)];
     } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
@@ -83,6 +88,8 @@ u16 read16(u32 addr) {
         std::memcpy(&data, &spram[addr & ((u32)MemorySize::SPRAM - 1)], sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&data, &edram[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&data, &dram[addr & ((u32)MemorySize::DRAM - 1)], sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&data, &resetVector[addr & ((u32)MemorySize::BootROM - 1)], sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
@@ -111,6 +118,8 @@ u32 read32(u32 addr) {
         std::memcpy(&data, &spram[addr & ((u32)MemorySize::SPRAM - 1)], sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&data, &edram[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&data, &dram[addr & ((u32)MemorySize::DRAM - 1)], sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
@@ -153,6 +162,8 @@ void write8(u32 addr, u8 data) {
         spram[addr & ((u32)MemorySize::SPRAM - 1)] = data;
     } else if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
         edram[addr & ((u32)MemorySize::EDRAM - 1)] = data;
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        dram[addr & ((u32)MemorySize::DRAM - 1)] = data;
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         resetVector[addr & ((u32)MemorySize::BootROM - 1)] = data;
     } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
@@ -174,6 +185,8 @@ void write16(u32 addr, u16 data) {
         std::memcpy(&spram[addr & ((u32)MemorySize::SPRAM - 1)], &data, sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&edram[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&dram[addr & ((u32)MemorySize::DRAM - 1)], &data, sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::BootROM)) {
         std::memcpy(&resetVector[addr & ((u32)MemorySize::BootROM - 1)], &data, sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
@@ -195,6 +208,8 @@ void write32(u32 addr, u32 data) {
         std::memcpy(&spram[addr & ((u32)MemorySize::SPRAM - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&edram[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&dram[addr & ((u32)MemorySize::DRAM - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
