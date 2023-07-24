@@ -43,7 +43,9 @@ enum class SysConSerialReg {
 enum class SysConCommand {
     GET_BARYON_VERSION = 0x01,
     GET_KERNEL_DIGITAL_KEY = 0x07,
+    GET_WAKE_UP_FACTOR = 0x0E,
     GET_TIMESTAMP = 0x11,
+    READ_SCRATCHPAD  = 0x24,
     GET_POWER_STATUS = 0x46,
 };
 
@@ -87,10 +89,10 @@ u16 getRxQueue() {
     }
 
     u16 data = 0;
-    data |= (u16)rxQueue.front() << 0; rxQueue.pop();
+    data |= (u16)rxQueue.front() << 8; rxQueue.pop();
 
     if (!rxQueue.empty()) {
-        data |= (u16)rxQueue.front() << 8; rxQueue.pop();
+        data |= (u16)rxQueue.front() << 0; rxQueue.pop();
     }
 
     if (rxQueue.empty()) {
@@ -129,6 +131,11 @@ void commonRead(SysConCommand cmd) {
 
             data = 0; // ??
             break;
+        case SysConCommand::GET_WAKE_UP_FACTOR:
+            std::puts("[SysCon  ] Get Wake Up Factor");
+
+            data = 0; // ??
+            break;
         case SysConCommand::GET_POWER_STATUS:
             std::puts("[SysCon  ] Get Power Status");
 
@@ -157,6 +164,21 @@ void cmdGetTimestamp() {
     }
 }
 
+void cmdReadScratchpad() {
+    const auto in = getTxQueue();
+
+    const auto src  = in >> 2;
+    const auto size = 1 << (in & 3);
+
+    std::printf("[SysCon  ] Read Scratchpad - Source: 0x%02X, size: %d\n", src, size);
+
+    writeResponse(size);
+
+    for (int i = 0; i < size; i++) {
+        rxQueue.push(0);
+    }
+}
+
 // HLE SysCon commands
 void doCommand() {
     const auto cmd = getTxQueue();
@@ -169,8 +191,14 @@ void doCommand() {
         case SysConCommand::GET_KERNEL_DIGITAL_KEY:
             commonRead(SysConCommand::GET_KERNEL_DIGITAL_KEY);
             break;
+        case SysConCommand::GET_WAKE_UP_FACTOR:
+            commonRead(SysConCommand::GET_WAKE_UP_FACTOR);
+            break;
         case SysConCommand::GET_TIMESTAMP:
             cmdGetTimestamp();
+            break;
+        case SysConCommand::READ_SCRATCHPAD:
+            cmdReadScratchpad();
             break;
         case SysConCommand::GET_POWER_STATUS:
             commonRead(SysConCommand::GET_POWER_STATUS);
