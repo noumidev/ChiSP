@@ -101,7 +101,7 @@ void write(u32 addr, u32 data) {
         case GPIOReg::IRQACK:
             std::printf("[GPIO    ] Write @ IRQACK = 0x%08X\n", data);
 
-            irqstatus = data;
+            irqstatus &= ~data;
             break;
         case GPIOReg::INEN:
             std::printf("[GPIO    ] Write @ INEN = 0x%08X\n", data);
@@ -118,6 +118,10 @@ void write(u32 addr, u32 data) {
 
             exit(0);
     }
+}
+
+void sendIRQ(GPIOInterrupt irq) {
+    irqstatus |= (u32)irq;
 }
 
 }
