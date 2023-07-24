@@ -42,6 +42,7 @@ enum class SysConSerialReg {
 
 enum class SysConCommand {
     GET_BARYON_VERSION = 0x01,
+    GET_KERNEL_DIGITAL_KEY = 0x07,
     GET_TIMESTAMP = 0x11,
     GET_POWER_STATUS = 0x46,
 };
@@ -111,26 +112,38 @@ void writeResponse(u8 len) {
     txQueue.push(0);
 }
 
-void cmdGetBaryonVersion() {
-    std::puts("[SysCon  ] Get Baryon Version");
-
+// Reads a 32-bit syscon register
+void commonRead(SysConCommand cmd) {
     writeResponse(4);
 
-    rxQueue.push((u8)(BARYON_VERSION >>  0));
-    rxQueue.push((u8)(BARYON_VERSION >>  8));
-    rxQueue.push((u8)(BARYON_VERSION >> 16));
-    rxQueue.push((u8)(BARYON_VERSION >> 24));
-}
+    u32 data;
 
-void cmdGetPowerStatus() {
-    std::puts("[SysCon  ] Get Power Status");
+    switch (cmd) {
+        case SysConCommand::GET_BARYON_VERSION:
+            std::puts("[SysCon  ] Get Baryon Version");
 
-    writeResponse(4);
+            data = BARYON_VERSION;
+            break;
+        case SysConCommand::GET_KERNEL_DIGITAL_KEY:
+            std::puts("[SysCon  ] Get Kernel Digital Key");
 
-    rxQueue.push((u8)(powerStatus >>  0));
-    rxQueue.push((u8)(powerStatus >>  8));
-    rxQueue.push((u8)(powerStatus >> 16));
-    rxQueue.push((u8)(powerStatus >> 24));
+            data = 0; // ??
+            break;
+        case SysConCommand::GET_POWER_STATUS:
+            std::puts("[SysCon  ] Get Power Status");
+
+            data = 0;
+            break;
+        default:
+            std::printf("Unhandled SysCon common read 0x%02X\n", (u8)cmd);
+
+            exit(0);
+    }
+
+    rxQueue.push((u8)(data >>  0));
+    rxQueue.push((u8)(data >>  8));
+    rxQueue.push((u8)(data >> 16));
+    rxQueue.push((u8)(data >> 24));
 }
 
 void cmdGetTimestamp() {
@@ -151,13 +164,16 @@ void doCommand() {
 
     switch ((SysConCommand)cmd) {
         case SysConCommand::GET_BARYON_VERSION:
-            cmdGetBaryonVersion();
+            commonRead(SysConCommand::GET_BARYON_VERSION);
+            break;
+        case SysConCommand::GET_KERNEL_DIGITAL_KEY:
+            commonRead(SysConCommand::GET_KERNEL_DIGITAL_KEY);
             break;
         case SysConCommand::GET_TIMESTAMP:
             cmdGetTimestamp();
             break;
         case SysConCommand::GET_POWER_STATUS:
-            cmdGetPowerStatus();
+            commonRead(SysConCommand::GET_POWER_STATUS);
             break;
         default:
             std::printf("Unhandled SysCon command 0x%02X, length: %u\n", cmd, len);
