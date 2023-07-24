@@ -101,6 +101,7 @@ enum class SPECIAL3 {
 };
 
 enum class BSHFL {
+    SEB = 0x10,
     BITREV = 0x14,
 };
 
@@ -890,6 +891,18 @@ void iSB(Allegrex *allegrex, u32 instr) {
     allegrex->write8(addr, data);
 }
 
+/* Sign Extend Byte */
+void iSEB(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, (i8)allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SEB %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 // Store Halfword
 void iSH(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -1336,6 +1349,9 @@ i64 doInstr(Allegrex *allegrex) {
                             const auto shamt = getShamt(instr);
 
                             switch ((BSHFL)shamt) {
+                                case BSHFL::SEB:
+                                    iSEB(allegrex, instr);
+                                    break;
                                 case BSHFL::BITREV:
                                     iBITREV(allegrex, instr);
                                     break;
