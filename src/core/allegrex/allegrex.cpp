@@ -113,6 +113,12 @@ void Allegrex::setBranchPC(u32 addr) {
         exit(0);
     }
 
+    if ((addr == (pc - 4)) && (!memory::read32(addr + 4))) {
+        std::printf("Infinite loop @ 0x%08X\n", addr);
+
+        exit(0);
+    }
+
     npc = addr;
 }
 
