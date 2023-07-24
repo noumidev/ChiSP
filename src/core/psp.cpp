@@ -28,9 +28,15 @@ void init(const char *bootPath, const char *nandPath) {
 }
 
 void resetCPU() {
-    cpu.reset();
+    static auto hasReset = false;
 
-    memory::unmapBootROM();
+    if (!hasReset) {
+        cpu.reset();
+
+        memory::unmapBootROM();
+
+        hasReset = true;
+    }
 }
 
 void run() {
