@@ -28,6 +28,7 @@ enum class SysConReg {
     PLLFREQ = 0x1C100068,
     IOEN = 0x1C100078,
     GPIOEN = 0x1C10007C,
+    FUSECONFIG = 0x1C100098,
 };
 
 enum class SysConSerialReg {
@@ -47,6 +48,7 @@ enum class SysConCommand {
     GET_WAKE_UP_FACTOR = 0x0E,
     GET_TIMESTAMP = 0x11,
     READ_SCRATCHPAD  = 0x24,
+    CTRL_VOLTAGE  = 0x42,
     GET_POWER_STATUS = 0x46,
 };
 
@@ -153,6 +155,21 @@ void commonRead(SysConCommand cmd) {
     rxQueue.push((u8)(data >> 24));
 }
 
+// Writes 32-bit syscon register
+void commonWrite(SysConCommand cmd) {
+    writeResponse(0);
+
+    switch (cmd) {
+        case SysConCommand::CTRL_VOLTAGE:
+            std::puts("[SysCon  ] Ctrl Voltage");
+            break;
+        default:
+            std::printf("Unhandled SysCon common write 0x%02X\n", (u8)cmd);
+
+            exit(0);
+    }
+}
+
 void cmdGetTimestamp() {
     std::puts("[SysCon  ] Get Timestamp");
 
@@ -222,6 +239,9 @@ void doCommand() {
         case SysConCommand::READ_SCRATCHPAD:
             cmdReadScratchpad();
             break;
+        case SysConCommand::CTRL_VOLTAGE:
+            commonWrite(SysConCommand::CTRL_VOLTAGE);
+            break;
         case SysConCommand::GET_POWER_STATUS:
             commonRead(SysConCommand::GET_POWER_STATUS);
             break;
@@ -233,7 +253,7 @@ void doCommand() {
 
     pushRxHash();
 
-    serialflags |= 1 << 2;
+    serialflags |= 5;
 
     gpio::sendIRQ(gpio::GPIOInterrupt::SysCon);
 }
@@ -276,6 +296,10 @@ u32 read(u32 addr) {
             std::puts("[SysCon  ] Read @ GPIOEN");
 
             return gpioen;
+        case SysConReg::FUSECONFIG:
+            std::puts("[SysCon  ] Read @ FUSECONFIG");
+
+            return 0;
         default:
             std::printf("[SysCon  ] Unhandled read @ 0x%08X\n", addr);
 
