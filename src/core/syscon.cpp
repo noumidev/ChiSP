@@ -7,11 +7,13 @@
 
 #include <cassert>
 #include <cstdio>
+#include <queue>
 
 #include "psp.hpp"
 
 namespace psp::syscon {
 
+constexpr u32 BARYON_VERSION  = 0x00110001;
 constexpr u32 TACHYON_VERSION = 0x40000001;
 
 enum class SysConReg {
@@ -38,6 +40,12 @@ enum class SysConSerialReg {
     UNKNOWN3 = 0x1E580024,
 };
 
+enum class SysConCommand {
+    GET_BARYON_VERSION = 0x01,
+    GET_TIMESTAMP = 0x11,
+    GET_POWER_STATUS = 0x46,
+};
+
 // NMI registers
 u32 nmien, nmiflag;
 
@@ -51,6 +59,116 @@ u32 ramsize = TACHYON_VERSION, pllfreq, spiclk;
 
 // Serial registers
 u32 serialflags;
+
+// SysCon commands
+std::queue<u8> txQueue, rxQueue;
+
+// SysCon internal registers
+u32 powerStatus = 0;
+
+u8 getTxQueue() {
+    if (txQueue.empty()) {
+        std::puts("SysCon TX queue is empty");
+
+        exit(0);
+    }
+
+    const auto data = txQueue.front(); txQueue.pop();
+
+    return data;
+}
+
+u16 getRxQueue() {
+    if (rxQueue.empty()) {
+        std::puts("SysCon RX queue is empty");
+
+        exit(0);
+    }
+
+    u16 data = 0;
+    data |= (u16)rxQueue.front() << 0; rxQueue.pop();
+
+    if (!rxQueue.empty()) {
+        data |= (u16)rxQueue.front() << 8; rxQueue.pop();
+    }
+
+    if (rxQueue.empty()) {
+        serialflags &= ~(1 << 2);
+    }
+
+    return data;
+};
+
+void clearTxQueue() {
+    while (!txQueue.empty()) {
+        txQueue.pop();
+    }
+}
+
+void writeResponse(u8 len) {
+    txQueue.push(0);
+    txQueue.push(len);
+    txQueue.push(0);
+}
+
+void cmdGetBaryonVersion() {
+    std::puts("[SysCon  ] Get Baryon Version");
+
+    writeResponse(4);
+
+    rxQueue.push((u8)(BARYON_VERSION >>  0));
+    rxQueue.push((u8)(BARYON_VERSION >>  8));
+    rxQueue.push((u8)(BARYON_VERSION >> 16));
+    rxQueue.push((u8)(BARYON_VERSION >> 24));
+}
+
+void cmdGetPowerStatus() {
+    std::puts("[SysCon  ] Get Power Status");
+
+    writeResponse(4);
+
+    rxQueue.push((u8)(powerStatus >>  0));
+    rxQueue.push((u8)(powerStatus >>  8));
+    rxQueue.push((u8)(powerStatus >> 16));
+    rxQueue.push((u8)(powerStatus >> 24));
+}
+
+void cmdGetTimestamp() {
+    std::puts("[SysCon  ] Get Timestamp");
+
+    writeResponse(12);
+
+    for (int i = 0; i < 6; i++) {
+        rxQueue.push(0);
+        rxQueue.push(0);
+    }
+}
+
+// HLE SysCon commands
+void doCommand() {
+    const auto cmd = getTxQueue();
+    const auto len = getTxQueue();
+
+    switch ((SysConCommand)cmd) {
+        case SysConCommand::GET_BARYON_VERSION:
+            cmdGetBaryonVersion();
+            break;
+        case SysConCommand::GET_TIMESTAMP:
+            cmdGetTimestamp();
+            break;
+        case SysConCommand::GET_POWER_STATUS:
+            cmdGetPowerStatus();
+            break;
+        default:
+            std::printf("Unhandled SysCon command 0x%02X, length: %u\n", cmd, len);
+
+            exit(0);
+    }
+
+    if (!rxQueue.empty()) {
+        serialflags |= 1 << 2;
+    }
+}
 
 u32 read(u32 addr) {
     switch ((SysConReg)addr) {
@@ -99,6 +217,10 @@ u32 read(u32 addr) {
 
 u32 readSerial(u32 addr) {
     switch ((SysConSerialReg)addr) {
+        case SysConSerialReg::DATA:
+            std::puts("[SysCon  ] Read @ SERIALDATA");
+
+            return getRxQueue();
         case SysConSerialReg::FLAGS:
             std::puts("[SysCon  ] Read @ SERIALFLAGS");
 
@@ -172,9 +294,24 @@ void writeSerial(u32 addr, u32 data) {
             break;
         case SysConSerialReg::CONTROL:
             std::printf("[SysCon  ] Write @ SERIALCONTROL = 0x%08X\n", data);
+
+            switch (data) {
+                case 4:
+                    clearTxQueue();
+                    break;
+                case 6:
+                    doCommand();
+                    break;
+                default:
+                    break;
+            }
             break;
         case SysConSerialReg::DATA:
             std::printf("[SysCon  ] Write @ SERIALDATA = 0x%08X\n", data);
+
+            // Endianness is reversed
+            txQueue.push(data >> 8);
+            txQueue.push(data >> 0);
             break;
         case SysConSerialReg::UNKNOWN0:
         case SysConSerialReg::UNKNOWN2:
