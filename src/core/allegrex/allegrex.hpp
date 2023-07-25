@@ -47,6 +47,8 @@ struct Allegrex {
 
     COP0 cop0;
 
+    u32 ic;
+
 private:
     Type type; // CPU type
 
