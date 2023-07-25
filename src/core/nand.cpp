@@ -21,6 +21,7 @@ constexpr u64 NAND_SIZE  = 2048 * BLOCK_SIZE;
 constexpr u32 NAND_ID = 0x35EC;
 
 enum class NANDReg {
+    CONTROL = 0x1D101000,
     STATUS  = 0x1D101004,
     COMMAND = 0x1D101008,
     PAGE  = 0x1D10100C,
@@ -69,7 +70,7 @@ std::array<u8, PAGE_SIZE_ECC> nandBuffer;
 std::array<u8, BLOCK_SIZE> serialData;
 u32 serialIdx, serialSize;
 
-u32 status, nandpage, dmapage, dmactrl, dmaintr;
+u32 control, status, nandpage, dmapage, dmactrl, dmaintr;
 
 u8 deviceStatus; // NAND chip status
 
@@ -134,6 +135,8 @@ void doDMA(bool toNAND, bool isPageEnabled, bool isSpareEnabled) {
     for (u64 i = 0; i < PAGE_SIZE_ECC; i += 16) {
         std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&nandBuffer[i], *(u32 *)&nandBuffer[i + 4], *(u32 *)&nandBuffer[i + 8], *(u32 *)&nandBuffer[i + 12]);
     }
+
+    dmaintr |= 2;
 }
 
 // Loads a NAND image
@@ -150,6 +153,9 @@ u32 read(u32 addr) {
     u32 data;
 
     switch ((NANDReg)addr) {
+        case NANDReg::CONTROL:
+            std::puts("[NAND    ] Read @ CONTROL");
+            return control;
         case NANDReg::STATUS:
             std::puts("[NAND    ] Read @ STATUS");
             return status;
@@ -177,8 +183,15 @@ u32 read(u32 addr) {
 
 void write(u32 addr, u32 data) {
     switch ((NANDReg)addr) {
+        case NANDReg::CONTROL:
+            std::printf("[NAND    ] Write @ CONTROL = 0x%08X\n", data);
+
+            control = data;
+            break;
         case NANDReg::STATUS: // ??
             std::printf("[NAND    ] Write @ STATUS = 0x%08X\n", data);
+
+            status |= data & 0x80; // Write-protect
             break;
         case NANDReg::COMMAND:
             std::printf("[NAND    ] Write @ COMMAND = 0x%08X\n", data);
@@ -237,6 +250,8 @@ u32 readBuffer32(u32 addr) {
         std::memcpy(&data, &nandBuffer[addr & (PAGE_SIZE - 1)], sizeof(u32));
     } else {
         switch (addr) {
+            case 0x1FF00800: // ECC
+                return 0;
             case 0x1FF00900:
                 std::memcpy(&data, &nandBuffer[PAGE_SIZE + 0x4], sizeof(u32));
                 break;
