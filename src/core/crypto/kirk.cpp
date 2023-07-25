@@ -128,6 +128,12 @@ void cmdDecryptPrivate() {
         std::puts("CMAC key is:");
         std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&kHeader.cmacKey[0], *(u32 *)&kHeader.cmacKey[4], *(u32 *)&kHeader.cmacKey[8], *(u32 *)&kHeader.cmacKey[12]);
 
+        // KIRK rounds up the data size to a multiple of 16
+        if (mHeader.dataLength & 0xF) {
+            mHeader.dataLength |= 0xF;
+            mHeader.dataLength += 1;
+        }
+
         // Decrypt data area
         u8 data[mHeader.dataLength];
         std::memcpy(data, &srcBuffer[KHEADER_SIZE + MHEADER_SIZE + mHeader.paddingLength], mHeader.dataLength);
