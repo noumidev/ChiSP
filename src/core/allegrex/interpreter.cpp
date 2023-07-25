@@ -85,6 +85,7 @@ enum class SPECIAL {
     MOVN = 0x0B,
     SYNC = 0x0F,
     MFHI = 0x10,
+    MFLO = 0x12,
     CLZ = 0x16,
     MULT  = 0x18,
     MULTU = 0x19,
@@ -115,6 +116,7 @@ enum class SPECIAL3 {
 enum class BSHFL {
     SEB = 0x10,
     BITREV = 0x14,
+    SEH = 0x18,
 };
 
 enum class REGIMM {
@@ -814,6 +816,17 @@ void iMFIC(Allegrex *allegrex, u32 instr) {
     }
 }
 
+/* Move From LO */
+void iMFLO(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+
+    allegrex->set(rd, allegrex->get(Reg::LO));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MFLO %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rd], allegrex->get(rd));
+    }
+}
+
 /* MINimum */
 void iMIN(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -1002,6 +1015,18 @@ void iSEB(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] SEB %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
+/* Sign Extend Halfword */
+void iSEH(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, (i16)allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SEH %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rd], allegrex->get(rd));
     }
 }
 
@@ -1338,6 +1363,9 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::MFHI:
                         iMFHI(allegrex, instr);
                         break;
+                    case SPECIAL::MFLO:
+                        iMFLO(allegrex, instr);
+                        break;
                     case SPECIAL::CLZ:
                         iCLZ(allegrex, instr);
                         break;
@@ -1522,6 +1550,9 @@ i64 doInstr(Allegrex *allegrex) {
                                     break;
                                 case BSHFL::BITREV:
                                     iBITREV(allegrex, instr);
+                                    break;
+                                case BSHFL::SEH:
+                                    iSEH(allegrex, instr);
                                     break;
                                 default:
                                     std::printf("Unhandled BSHFL instruction 0x%02X (0x%08X) @ 0x%08X\n", shamt, instr, cpc);
