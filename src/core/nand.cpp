@@ -139,6 +139,48 @@ void doDMA(bool toNAND, bool isPageEnabled, bool isSpareEnabled) {
     dmaintr |= 2;
 }
 
+// Algorithm taken from: https://www.psdevwiki.com/psp/NAND_Flash_Memory#ECC_algorithms
+u8 getParity(u8 byte) {
+    return ((0x6996 >> (byte & 0xF)) ^ (0x6996 >> (byte >> 4))) & 1;
+}
+
+// Generates an ECC for the current page in the NAND buffer
+// Algorithm taken from: https://www.psdevwiki.com/psp/NAND_Flash_Memory#ECC_algorithm_for_the_page_data
+u32 generateECC() {
+    u8 output[24];
+    std::memset(output, 0, sizeof(output));
+
+    for (int i = 0; i < (int)PAGE_SIZE; i++) {
+        const auto byte = nandBuffer[i];
+
+        const auto parity = getParity(byte);
+
+        for (int j = 0; j < 9; j++) {
+            if (i & (1 << j)) {
+                output[1 + 2 * j] ^= parity;
+            } else {
+                output[2 * j] ^= parity;
+            }
+
+            output[18] ^= ((byte >> 6) ^ (byte >> 4) ^ (byte >> 2) ^ (byte >> 0)) & 1;
+            output[19] ^= ((byte >> 7) ^ (byte >> 5) ^ (byte >> 3) ^ (byte >> 1)) & 1;
+            output[20] ^= ((byte >> 5) ^ (byte >> 4) ^ (byte >> 1) ^ (byte >> 0)) & 1;
+            output[21] ^= ((byte >> 7) ^ (byte >> 6) ^ (byte >> 3) ^ (byte >> 2)) & 1;
+            output[22] ^= ((byte >> 3) ^ (byte >> 2) ^ (byte >> 1) ^ (byte >> 0)) & 1;
+            output[23] ^= ((byte >> 7) ^ (byte >> 6) ^ (byte >> 5) ^ (byte >> 4)) & 1;
+        }
+    }
+
+    u32 result = 0;
+    for (int i = 0; i < 24; i++) {
+        result |= (u32)output[i] << i;
+    }
+
+    std::printf("[NAND    ] ECC is: 0x%08X\n", result);
+
+    return result;
+}
+
 // Loads a NAND image
 void init(const char *nandPath) {
     std::printf("[NAND    ] Loading NAND image \"%s\"\n", nandPath);
@@ -251,7 +293,7 @@ u32 readBuffer32(u32 addr) {
     } else {
         switch (addr) {
             case 0x1FF00800: // ECC
-                return 0;
+                return generateECC();
             case 0x1FF00900:
                 std::memcpy(&data, &nandBuffer[PAGE_SIZE + 0x4], sizeof(u32));
                 break;
