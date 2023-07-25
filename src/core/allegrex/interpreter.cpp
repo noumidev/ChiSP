@@ -79,6 +79,7 @@ enum class SPECIAL {
     SRA  = 0x03,
     SLLV = 0x04,
     SRLV = 0x06,
+    SRAV = 0x07,
     JR = 0x08,
     JALR = 0x09,
     MOVZ = 0x0A,
@@ -1147,6 +1148,19 @@ void iSRA(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Shift Right Arithmetic Variable
+void iSRAV(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    allegrex->set(rd, (i32)allegrex->get(rt) >> (allegrex->get(rs) & 0x1F));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SRAV %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rs], regNames[rd], allegrex->get(rd));
+    }
+}
+
 // Shift Right Logical
 void iSRL(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -1344,6 +1358,9 @@ i64 doInstr(Allegrex *allegrex) {
                                     exit(0);
                             }
                         }
+                        break;
+                    case SPECIAL::SRAV:
+                        iSRAV(allegrex, instr);
                         break;
                     case SPECIAL::JR:
                         iJR(allegrex, instr);
