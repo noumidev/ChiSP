@@ -42,6 +42,8 @@ void init(const char *bootPath) {
 }
 
 u8 *getMemoryPointer(u32 addr) {
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
     if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         return &dram[addr & ((u32)MemorySize::DRAM - 1)];
     } else if (inRange(addr, (u64)MemoryBase::IRAM, (u64)MemorySize::BootROM)) {
@@ -110,6 +112,8 @@ u16 read16(u32 addr) {
 }
 
 u32 read32(u32 addr) {
+    if (addr == 0x884255A0) return 1 << 0xC; // For printf hook
+
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
     u32 data;
@@ -131,7 +135,7 @@ u32 read32(u32 addr) {
     } else if (inRange(addr, (u64)MemoryBase::I2C, (u64)MemorySize::I2C)) {
         return i2c::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::UART0, (u64)MemorySize::UART)) {
-        std::printf("[UART0   ] Unhandled read @ 0x%08X\n", addr);
+        //std::printf("[UART0   ] Unhandled read @ 0x%08X\n", addr);
 
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
@@ -225,7 +229,11 @@ void write32(u32 addr, u32 data) {
     } else if (inRange(addr, (u64)MemoryBase::I2C, (u64)MemorySize::I2C)) {
         return i2c::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::UART0, (u64)MemorySize::UART)) {
-        std::printf("[UART0   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
+        if (addr == (u32)MemoryBase::UART0) {
+            std::putchar(data);
+        } else {
+            std::printf("[UART0   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
+        }
     } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
         return gpio::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
