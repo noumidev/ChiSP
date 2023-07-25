@@ -48,6 +48,8 @@ enum class SysConCommand {
     GET_WAKE_UP_FACTOR = 0x0E,
     GET_TIMESTAMP = 0x11,
     READ_SCRATCHPAD  = 0x24,
+    SEND_SETPARAM = 0x25,
+    CTRL_TACHYON_WDT = 0x31,
     CTRL_VOLTAGE  = 0x42,
     GET_POWER_STATUS = 0x46,
 };
@@ -160,6 +162,9 @@ void commonWrite(SysConCommand cmd) {
     writeResponse(0);
 
     switch (cmd) {
+        case SysConCommand::CTRL_TACHYON_WDT:
+            std::puts("[SysCon  ] Ctrl Tachyon WDT");
+            break;
         case SysConCommand::CTRL_VOLTAGE:
             std::puts("[SysCon  ] Ctrl Voltage");
             break;
@@ -194,6 +199,12 @@ void cmdReadScratchpad() {
     for (int i = 0; i < size; i++) {
         rxQueue.push(0);
     }
+}
+
+void cmdSendSetparam() {
+    std::printf("[SysCon  ] Send Setparam\n");
+
+    writeResponse(0);
 }
 
 // Calculates and pushes response hash
@@ -238,6 +249,12 @@ void doCommand() {
             break;
         case SysConCommand::READ_SCRATCHPAD:
             cmdReadScratchpad();
+            break;
+        case SysConCommand::SEND_SETPARAM:
+            cmdSendSetparam();
+            break;
+        case SysConCommand::CTRL_TACHYON_WDT:
+            commonWrite(SysConCommand::CTRL_TACHYON_WDT);
             break;
         case SysConCommand::CTRL_VOLTAGE:
             commonWrite(SysConCommand::CTRL_VOLTAGE);
