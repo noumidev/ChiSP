@@ -56,6 +56,7 @@ enum class Opcode {
     COP0 = 0x10,
     BEQL = 0x14,
     BNEL = 0x15,
+    SPECIAL2 = 0x1C,
     SPECIAL3 = 0x1F,
     LB  = 0x20,
     LH  = 0x21,
@@ -84,7 +85,9 @@ enum class SPECIAL {
     MOVN = 0x0B,
     SYNC = 0x0F,
     MFHI = 0x10,
-    CLZ  = 0x16,
+    CLZ = 0x16,
+    MULT  = 0x18,
+    MULTU = 0x19,
     DIVU = 0x1B,
     ADDU = 0x21,
     SUBU = 0x23,
@@ -96,6 +99,11 @@ enum class SPECIAL {
     SLTU = 0x2B,
     MAX = 0x2C,
     MIN = 0x2D,
+};
+
+enum class SPECIAL2 {
+    MFIC = 0x24,
+    MTIC = 0x26,
 };
 
 enum class SPECIAL3 {
@@ -795,6 +803,17 @@ void iMFHI(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Move From Interrupt Control
+void iMFIC(Allegrex *allegrex, u32 instr) {
+    const auto rt = getRt(instr);
+
+    allegrex->set(rt, allegrex->ic);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MFIC %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rt], allegrex->ic);
+    }
+}
+
 /* MINimum */
 void iMIN(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -861,6 +880,47 @@ void iMTC(Allegrex *allegrex, int copN, u32 instr) {
         std::printf("[%s] [0x%08X] MTC%d %s, %d; %d = 0x%08X\n", allegrex->getTypeName(), cpc, copN, regNames[rt], rd, rd, t);
     }
 }
+
+// Move To Interrupt Control
+void iMTIC(Allegrex *allegrex, u32 instr) {
+    const auto rt = getRt(instr);
+
+    allegrex->ic = allegrex->get(rt);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MTIC %s; IC = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], allegrex->ic);
+    }
+}
+
+/* MULTiply */
+void iMULT(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto result = (i64)(i32)allegrex->get(rs) * (i64)(i32)allegrex->get(rt);
+
+    allegrex->set(Reg::LO, result >>  0);
+    allegrex->set(Reg::HI, result >> 32);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MULT %s, %s; LO = 0x%08X, HI = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], allegrex->get(Reg::LO), allegrex->get(Reg::HI));
+    }
+}   
+
+/* MULTiply Unsigned */
+void iMULTU(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto result = (u64)allegrex->get(rs) * (u64)allegrex->get(rt);
+
+    allegrex->set(Reg::LO, result >>  0);
+    allegrex->set(Reg::HI, result >> 32);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MULTU %s, %s; LO = 0x%08X, HI = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], allegrex->get(Reg::LO), allegrex->get(Reg::HI));
+    }
+}   
 
 // NOR
 void iNOR(Allegrex *allegrex, u32 instr) {
@@ -1281,6 +1341,12 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::CLZ:
                         iCLZ(allegrex, instr);
                         break;
+                    case SPECIAL::MULT:
+                        iMULTU(allegrex, instr);
+                        break;
+                    case SPECIAL::MULTU:
+                        iMULTU(allegrex, instr);
+                        break;
                     case SPECIAL::DIVU:
                         iDIVU(allegrex, instr);
                         break;
@@ -1416,6 +1482,24 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::BNEL:
             iBNEL(allegrex, instr);
+            break;
+        case Opcode::SPECIAL2:
+            {
+                const auto funct = getFunct(instr);
+
+                switch ((SPECIAL2)funct) {
+                    case SPECIAL2::MFIC:
+                        iMFIC(allegrex, instr);
+                        break;
+                    case SPECIAL2::MTIC:
+                        iMTIC(allegrex, instr);
+                        break;
+                    default:
+                        std::printf("Unhandled %s SPECIAL2 instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, instr, cpc);
+
+                        exit(0);
+                }
+            }
             break;
         case Opcode::SPECIAL3:
             {
