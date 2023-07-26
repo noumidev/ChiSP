@@ -8,7 +8,12 @@
 #include <cassert>
 #include <cstdio>
 
+#include "intc.hpp"
+#include "scheduler.hpp"
+
 namespace psp::systime {
+
+constexpr i64 SYSTIME_CYCLES = 333;
 
 enum class SysTimeReg {
     TIME  = 0x1C600000,
@@ -19,6 +24,24 @@ enum class SysTimeReg {
 };
 
 u32 time, alarm;
+
+u64 idClockSysTime;
+
+void clockSysTime() {
+    ++time;
+
+    if (time == alarm) {
+        intc::sendIRQ(intc::InterruptSource::SysTime);
+    }
+
+    scheduler::addEvent(idClockSysTime, 0, SYSTIME_CYCLES);
+}
+
+void init() {
+    idClockSysTime = scheduler::registerEvent([](int) {clockSysTime();});
+
+    scheduler::addEvent(idClockSysTime, 0, SYSTIME_CYCLES);
+}
 
 u32 read(u32 addr) {
     switch ((SysTimeReg)addr) {
@@ -46,11 +69,15 @@ void write(u32 addr, u32 data) {
             std::printf("[SysTime ] Write @ TIME = 0x%08X\n", data);
 
             time = data;
+
+            intc::clearIRQ(intc::InterruptSource::SysTime);
             break;
         case SysTimeReg::ALARM:
             std::printf("[SysTime ] Write @ ALARM = 0x%08X\n", data);
             
             alarm = data;
+
+            intc::clearIRQ(intc::InterruptSource::SysTime);
             break;
         case SysTimeReg::UNKNOWN0:
         case SysTimeReg::UNKNOWN1:
