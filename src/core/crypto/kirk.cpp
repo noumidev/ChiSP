@@ -14,6 +14,7 @@
 #include <cryptopp/modes.h>
 #include <cryptopp/sha.h>
 
+#include "../intc.hpp"
 #include "../memory.hpp"
 #include "../scheduler.hpp"
 
@@ -392,7 +393,7 @@ void finishPhase1() {
 
     status |= STATUS::PHASE_1_DONE;
 
-    // TODO: send interrupt request
+    if ((KIRKCommand)cmd != KIRKCommand::INIT) intc::sendIRQ(intc::InterruptSource::KIRK);
 }
 
 void init() {
