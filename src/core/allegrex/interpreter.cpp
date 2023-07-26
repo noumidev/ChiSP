@@ -110,6 +110,7 @@ enum class SPECIAL {
 };
 
 enum class SPECIAL2 {
+    HALT = 0x00,
     MFIC = 0x24,
     MTIC = 0x26,
 };
@@ -609,6 +610,8 @@ void iERET(Allegrex *allegrex, u32 instr) {
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] ERET\n", allegrex->getTypeName(), cpc);
     }
+
+    allegrex->checkInterrupt();
 }
 
 // Extract
@@ -627,6 +630,17 @@ void iEXT(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] EXT %s, %s, %u, %u; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], pos, size, regNames[rt], allegrex->get(rt));
+    }
+}
+
+// HALT
+void iHALT(Allegrex *allegrex, u32 instr) {
+    (void)instr;
+
+    allegrex->isHalted = true;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] HALT\n", allegrex->getTypeName(), cpc);
     }
 }
 
@@ -932,10 +946,12 @@ void iMFHI(Allegrex *allegrex, u32 instr) {
 void iMFIC(Allegrex *allegrex, u32 instr) {
     const auto rt = getRt(instr);
 
-    allegrex->set(rt, allegrex->ic);
+    const auto ic = allegrex->cop0.getIC();
+
+    allegrex->set(rt, ic);
 
     if (ENABLE_DISASM) {
-        std::printf("[%s] [0x%08X] MFIC %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rt], allegrex->ic);
+        std::printf("[%s] [0x%08X] MFIC %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rt], ic);
     }
 }
 
@@ -1005,6 +1021,8 @@ void iMTC(Allegrex *allegrex, int copN, u32 instr) {
     switch (copN) {
         case 0:
             allegrex->cop0.setStatus(rd, t);
+
+            allegrex->checkInterrupt();
             break;
         case 1:
             allegrex->fpu.set(rd, t);
@@ -1035,11 +1053,13 @@ void iMTHI(Allegrex *allegrex, u32 instr) {
 void iMTIC(Allegrex *allegrex, u32 instr) {
     const auto rt = getRt(instr);
 
-    allegrex->ic = allegrex->get(rt);
+    allegrex->cop0.setIC(allegrex->get(rt));
 
     if (ENABLE_DISASM) {
-        std::printf("[%s] [0x%08X] MTIC %s; IC = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], allegrex->ic);
+        std::printf("[%s] [0x%08X] MTIC %s; IC = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], allegrex->cop0.getIC());
     }
+
+    allegrex->checkInterrupt();
 }
 
 /* Move To LO */
@@ -1766,6 +1786,9 @@ i64 doInstr(Allegrex *allegrex) {
                 const auto funct = getFunct(instr);
 
                 switch ((SPECIAL2)funct) {
+                    case SPECIAL2::HALT:
+                        iHALT(allegrex, instr);
+                        break;
                     case SPECIAL2::MFIC:
                         iMFIC(allegrex, instr);
                         break;
@@ -1874,6 +1897,8 @@ i64 doInstr(Allegrex *allegrex) {
 
 void run(Allegrex *allegrex, i64 runCycles) {
     for (i64 i = 0; i < runCycles;) {
+        if (allegrex->isHalted) return;
+
         cpc = allegrex->getPC();
 
         if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0);
