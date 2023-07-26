@@ -29,6 +29,7 @@ void Allegrex::init(Type type) {
     }
 
     cop0.init((int)type);
+    fpu.init((int)type);
 
     // Clear all GPRs and delay slot helpers
     std::memset(regs, 0, sizeof(regs));

@@ -6,11 +6,13 @@
 #pragma once
 
 #include "cop0.hpp"
+#include "fpu.hpp"
 #include "../../common/types.hpp"
 
 namespace psp::allegrex {
 
 using cop0::COP0;
+using fpu::FPU;
 
 enum class Type {
     Allegrex,
@@ -45,7 +47,9 @@ struct Allegrex {
     void (*write16)(u32, u16);
     void (*write32)(u32, u32);
 
+    // Coprocessors
     COP0 cop0;
+    FPU  fpu;
 
     u32 ic;
 

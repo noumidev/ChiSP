@@ -27,6 +27,7 @@ set(SOURCES
     src/core/systime.cpp
     src/core/allegrex/allegrex.cpp
     src/core/allegrex/cop0.cpp
+    src/core/allegrex/fpu.cpp
     src/core/allegrex/interpreter.cpp
     src/core/crypto/kirk.cpp
 )
@@ -46,6 +47,7 @@ set(HEADERS
     src/core/systime.hpp
     src/core/allegrex/allegrex.hpp
     src/core/allegrex/cop0.hpp
+    src/core/allegrex/fpu.hpp
     src/core/allegrex/interpreter.hpp
     src/core/crypto/kirk.hpp
 )
