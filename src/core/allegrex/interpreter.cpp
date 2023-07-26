@@ -88,6 +88,7 @@ enum class SPECIAL {
     JALR = 0x09,
     MOVZ = 0x0A,
     MOVN = 0x0B,
+    SYSCALL = 0x0C,
     SYNC = 0x0F,
     MFHI = 0x10,
     MTHI = 0x11,
@@ -97,6 +98,7 @@ enum class SPECIAL {
     MULT  = 0x18,
     MULTU = 0x19,
     DIVU = 0x1B,
+    ADD  = 0x20,
     ADDU = 0x21,
     SUBU = 0x23,
     AND = 0x24,
@@ -188,6 +190,27 @@ u32 getRs(u32 instr) {
 // Returns Rt
 u32 getRt(u32 instr) {
     return (instr >> 16) & 0x1F;
+}
+
+// ADD
+void iADD(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto result = (u64)(i32)allegrex->get(rs) + (u64)(i32)allegrex->get(rt);
+
+    if (((result >> 31) & 1) != ((result >> 32) & 1)) { // ?? Is this a thing on Allegrex?
+        std::puts("ADD overflow");
+
+        exit(0);
+    }
+
+    allegrex->set(rd, (u32)result);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] ADD %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
 }
 
 // ADD Immediate
@@ -1472,6 +1495,18 @@ void iSYNC(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// SYStem CALL
+void iSYSCALL(Allegrex *allegrex, u32 instr) {
+    (void)instr;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SYSCALL\n", allegrex->getTypeName(), cpc);
+    }
+
+    allegrex->raiseException(Exception::SystemCall);
+    allegrex->cop0.setSyscallCode((instr >> 6) & 0xFFFFF);
+}
+
 // XOR
 void iXOR(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -1573,6 +1608,9 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::MOVN:
                         iMOVN(allegrex, instr);
                         break;
+                    case SPECIAL::SYSCALL:
+                        iSYSCALL(allegrex, instr);
+                        break;
                     case SPECIAL::SYNC:
                         iSYNC(allegrex, instr);
                         break;
@@ -1599,6 +1637,9 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case SPECIAL::DIVU:
                         iDIVU(allegrex, instr);
+                        break;
+                    case SPECIAL::ADD:
+                        iADD(allegrex, instr);
                         break;
                     case SPECIAL::ADDU:
                         iADDU(allegrex, instr);
@@ -1900,6 +1941,10 @@ void run(Allegrex *allegrex, i64 runCycles) {
         if (allegrex->isHalted) return;
 
         cpc = allegrex->getPC();
+
+        if (cpc == 0x8802A900) {
+            std::printf("[PSP     ] %s", memory::getMemoryPointer(allegrex->get(Reg::A2)));
+        }
 
         if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0);
 
