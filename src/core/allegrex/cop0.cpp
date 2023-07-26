@@ -26,6 +26,7 @@ enum class StatusReg {
     Status = 0x0C,
     Cause  = 0x0D,
     Config = 0x10,
+    CPUId = 0x16,
     TagLo = 0x1C,
     TagHi = 0x1D,
 };
@@ -71,6 +72,8 @@ u32 COP0::getStatus(int idx) {
             return status;
         case StatusReg::Config:
             return CONFIG;
+        case StatusReg::CPUId:
+            return cpuID;
         case StatusReg::TagLo:
             return tagLo;
         case StatusReg::TagHi:
