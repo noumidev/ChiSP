@@ -180,12 +180,6 @@ void Allegrex::raiseException(Exception excode) {
     } else {
         vector = cop0.getEBase();
     }
-    
-    if (excode == Exception::Interrupt) {
-        vector += 0x200;
-    } else {
-        vector += 0x180;
-    }
 
     advanceDelay();
 
