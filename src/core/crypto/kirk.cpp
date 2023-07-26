@@ -164,15 +164,18 @@ enum class KIRKReg {
     COMMAND = 0x1DE00010,
     RESULT  = 0x1DE00014,
     STATUS  = 0x1DE0001C,
+    ASYNCSTAT = 0x1DE00020,
+    ASYNCEND  = 0x1DE00024,
     PRVSTS  = 0x1DE00028,
     SRC = 0x1DE0002C,
     DST = 0x1DE00030,
 };
 
 enum class KIRKCommand {
-    DECRYPT_PRIVATE = 0x1,
-    DECRYPT_AES_KEYSTORE = 0x7,
-    GENERATE_SHA1 = 0xB,
+    DECRYPT_PRIVATE = 0x01,
+    DECRYPT_AES_KEYSTORE = 0x07,
+    GENERATE_SHA1 = 0x0B,
+    INIT = 0x0F,
 };
 
 enum STATUS {
@@ -201,6 +204,9 @@ static_assert(sizeof(MetadataHeader) == MHEADER_SIZE);
 u8 cmd; // Current KIRK command
 
 u32 status;
+
+// ASYNC registers
+u32 asyncstat, asyncend;
 
 // Buffer addresses
 u32 srcAddr, dstAddr;
@@ -368,6 +374,9 @@ void doCommand() {
         case KIRKCommand::GENERATE_SHA1:
             cmdGenerateSHA1();
             break;
+        case KIRKCommand::INIT:
+            std::puts("[KIRK    ] Init");
+            break;
         default:
             std::printf("Unhandled KIRK command 0x%02X\n", cmd);
 
@@ -385,6 +394,12 @@ u32 read(u32 addr) {
         case KIRKReg::STATUS:
             std::printf("[KIRK    ] Read @ STATUS\n");
             return status;
+        case KIRKReg::ASYNCSTAT:
+            std::printf("[KIRK    ] Read @ ASYNCSTAT\n");
+            return asyncstat;
+        case KIRKReg::ASYNCEND:
+            std::printf("[KIRK    ] Read @ ASYNCEND\n");
+            return asyncend;
         default:
             std::printf("[KIRK    ] Unhandled read @ 0x%08X\n", addr);
 
@@ -405,6 +420,16 @@ void write(u32 addr, u32 data) {
             std::printf("[KIRK    ] Write @ COMMAND = 0x%08X\n", data);
 
             cmd = data;
+            break;
+        case KIRKReg::ASYNCSTAT:
+            std::printf("[KIRK    ] Write @ ASYNCSTAT = 0x%08X\n", data);
+
+            asyncstat = data;
+            break;
+        case KIRKReg::ASYNCEND:
+            std::printf("[KIRK    ] Write @ ASYNCEND = 0x%08X\n", data);
+
+            asyncend = data;
             break;
         case KIRKReg::PRVSTS:
             std::printf("[KIRK    ] Write @ PRVSTS = 0x%08X\n", data);
