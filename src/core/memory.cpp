@@ -134,6 +134,10 @@ u32 read32(u32 addr) {
         return syscon::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
         return intc::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::Timer, (u64)MemorySize::Timer)) {
+        std::printf("[Timer   ] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
         return systime::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
@@ -234,6 +238,8 @@ void write32(u32 addr, u32 data) {
         return syscon::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
         return intc::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::Timer, (u64)MemorySize::Timer)) {
+        std::printf("[Timer   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
         return systime::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
