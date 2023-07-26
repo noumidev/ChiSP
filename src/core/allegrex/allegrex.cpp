@@ -154,4 +154,13 @@ void Allegrex::doBranch(u32 target, bool cond, int linkReg, bool isLikely) {
     }
 }
 
+void Allegrex::exceptionReturn() {
+    // Clear load linked bit
+    ll = false;
+
+    setPC(cop0.exceptionReturn());
+
+    std::printf("[%s] Returning from exception, PC: 0x%08X\n", typeNames[(int)type], pc);
+}
+
 }

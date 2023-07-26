@@ -38,6 +38,8 @@ struct Allegrex {
 
     void doBranch(u32 target, bool cond, int linkReg, bool isLikely);
 
+    void exceptionReturn();
+
     // Read/write handlers
     u8  (*read8 )(u32);
     u16 (*read16)(u32);
@@ -60,6 +62,8 @@ private:
     u32 pc, npc; // Program counters
 
     bool inDelaySlot[2]; // Delay slot helper
+
+    bool ll; // Load Linked bit
 };
 
 }

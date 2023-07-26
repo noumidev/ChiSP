@@ -17,11 +17,14 @@ struct COP0 {
 
     u32  getStatus(int idx);
     void setStatus(int idx, u32 data);
+
+    u32 exceptionReturn();
 private:
     // Status
     u32 cpuID;
     u32 count, compare;
     u32 status, cause;
+    u32 epc;
     u32 ebase;
     u32 tagLo, tagHi;
 

@@ -21,11 +21,17 @@ enum class StatusReg {
     Compare = 0x0B,
     Status = 0x0C,
     Cause  = 0x0D,
+    EPC = 0x0E,
     Config = 0x10,
     CPUId = 0x16,
     EBase = 0x19,
     TagLo = 0x1C,
     TagHi = 0x1D,
+};
+
+enum Status {
+    EXL = 1 << 1,
+    ERL = 1 << 2,
 };
 
 void COP0::init(int cpuID) {
@@ -52,10 +58,14 @@ u32 COP0::getStatus(int idx) {
             return compare;
         case StatusReg::Status:
             return status;
+        case StatusReg::EPC:
+            return epc;
         case StatusReg::Config:
             return CONFIG;
         case StatusReg::CPUId:
             return cpuID;
+        case StatusReg::EBase:
+            return ebase;
         case StatusReg::TagLo:
             return tagLo;
         case StatusReg::TagHi:
@@ -81,6 +91,9 @@ void COP0::setStatus(int idx, u32 data) {
         case StatusReg::Cause:
             cause = data;
             break;
+        case StatusReg::EPC:
+            epc = data;
+            break;
         case StatusReg::EBase:
             ebase = data;
             break;
@@ -95,6 +108,22 @@ void COP0::setStatus(int idx, u32 data) {
 
             exit(0);
     }
+}
+
+// Return appropriate EPC, clear exception/error flag
+u32 COP0::exceptionReturn() {
+    u32 pc;
+    if (status & Status::ERL) {
+        std::puts("Unhandled error return");
+
+        exit(0);
+    } else {
+        pc = epc;
+
+        status &= ~Status::EXL;
+    }
+
+    return pc;
 }
 
 }
