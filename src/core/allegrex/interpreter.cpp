@@ -54,6 +54,7 @@ enum class Opcode {
     XORI = 0x0E,
     LUI  = 0x0F,
     COP0 = 0x10,
+    COP1 = 0x11,
     BEQL = 0x14,
     BNEL = 0x15,
     BLEZL = 0x16,
@@ -132,6 +133,7 @@ enum class REGIMM {
 
 enum class COPOpcode {
     MFC = 0x00,
+    CFC = 0x02,
     MTC = 0x04,
     CTC = 0x06,
 };
@@ -497,6 +499,35 @@ void iCACHE(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// move Coprocessor From Control
+void iCFC(Allegrex *allegrex, int copN, u32 instr) {
+    assert((copN >= 0) && (copN < 4));
+
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+
+    u32 data;
+
+    switch (copN) {
+        case 0:
+            data = allegrex->cop0.getControl(rd);
+            break;
+        case 1:
+            data = allegrex->fpu.getControl(rd);
+            break;
+        default:
+            std::printf("Unhandled %s CFC coprocessor %d\n", allegrex->getTypeName(), copN);
+
+            exit(0);
+    }
+
+    allegrex->set(rt, data);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] CFC%d %s, %d; %s = 0x%08X\n", allegrex->getTypeName(), cpc, copN, regNames[rt], rd, regNames[rt], data);
+    }
+}
+
 /* Count Leading Zeroes */
 void iCLZ(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -527,6 +558,9 @@ void iCTC(Allegrex *allegrex, int copN, u32 instr) {
     switch (copN) {
         case 0:
             allegrex->cop0.setControl(rd, t);
+            break;
+        case 1:
+            allegrex->fpu.setControl(rd, t);
             break;
         default:
             std::printf("Unhandled %s CTC coprocessor %d\n", allegrex->getTypeName(), copN);
@@ -816,6 +850,9 @@ void iMFC(Allegrex *allegrex, int copN, u32 instr) {
         case 0:
             data = allegrex->cop0.getStatus(rd);
             break;
+        case 1:
+            data = allegrex->fpu.get(rd);
+            break;
         default:
             std::printf("Unhandled %s MFC coprocessor %d\n", allegrex->getTypeName(), copN);
 
@@ -917,6 +954,9 @@ void iMTC(Allegrex *allegrex, int copN, u32 instr) {
     switch (copN) {
         case 0:
             allegrex->cop0.setStatus(rd, t);
+            break;
+        case 1:
+            allegrex->fpu.set(rd, t);
             break;
         default:
             std::printf("Unhandled %s MTC coprocessor %d\n", allegrex->getTypeName(), copN);
@@ -1546,11 +1586,38 @@ i64 doInstr(Allegrex *allegrex) {
                     case COPOpcode::MFC:
                         iMFC(allegrex, 0, instr);
                         break;
+                    case COPOpcode::CFC:
+                        iCFC(allegrex, 0, instr);
+                        break;
                     case COPOpcode::MTC:
                         iMTC(allegrex, 0, instr);
                         break;
                     case COPOpcode::CTC:
                         iCTC(allegrex, 0, instr);
+                        break;
+                    default:
+                        std::printf("Unhandled %s coprocessor instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rs, instr, cpc);
+
+                        exit(0);
+                }
+            }
+            break;
+        case Opcode::COP1:
+            {
+                const auto rs = getRs(instr);
+
+                switch ((COPOpcode)rs) {
+                    case COPOpcode::MFC:
+                        iMFC(allegrex, 1, instr);
+                        break;
+                    case COPOpcode::CFC:
+                        iCFC(allegrex, 1, instr);
+                        break;
+                    case COPOpcode::MTC:
+                        iMTC(allegrex, 1, instr);
+                        break;
+                    case COPOpcode::CTC:
+                        iCTC(allegrex, 1, instr);
                         break;
                     default:
                         std::printf("Unhandled %s coprocessor instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rs, instr, cpc);
