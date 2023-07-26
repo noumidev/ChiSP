@@ -90,7 +90,9 @@ enum class SPECIAL {
     MOVN = 0x0B,
     SYNC = 0x0F,
     MFHI = 0x10,
+    MTHI = 0x11,
     MFLO = 0x12,
+    MTLO = 0x13,
     CLZ = 0x16,
     MULT  = 0x18,
     MULTU = 0x19,
@@ -138,6 +140,11 @@ enum class COPOpcode {
     CFC = 0x02,
     MTC = 0x04,
     CTC = 0x06,
+    CO  = 0x10,
+};
+
+enum class COP0Opcode {
+    ERET = 0x18,
 };
 
 u32 cpc; // Current program counter
@@ -591,7 +598,18 @@ void iDIVU(Allegrex *allegrex, u32 instr) {
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] DIVU %s, %s; LO = 0x%08X, HI = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], allegrex->get(Reg::LO), allegrex->get(Reg::HI));
     }
-}   
+}
+
+// Exception RETurn
+void iERET(Allegrex *allegrex, u32 instr) {
+    (void)instr;
+
+    allegrex->exceptionReturn();
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] ERET\n", allegrex->getTypeName(), cpc);
+    }
+}
 
 // Extract
 void iEXT(Allegrex *allegrex, u32 instr) {
@@ -1002,6 +1020,17 @@ void iMTC(Allegrex *allegrex, int copN, u32 instr) {
     }
 }
 
+/* Move To HI */
+void iMTHI(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRd(instr);
+
+    allegrex->set(Reg::HI, allegrex->get(rs));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MTHI %s; HI = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], allegrex->get(Reg::HI));
+    }
+}
+
 // Move To Interrupt Control
 void iMTIC(Allegrex *allegrex, u32 instr) {
     const auto rt = getRt(instr);
@@ -1010,6 +1039,17 @@ void iMTIC(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] MTIC %s; IC = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], allegrex->ic);
+    }
+}
+
+/* Move To LO */
+void iMTLO(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRd(instr);
+
+    allegrex->set(Reg::LO, allegrex->get(rs));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] MTLO %s; LO = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], allegrex->get(Reg::LO));
     }
 }
 
@@ -1519,8 +1559,14 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::MFHI:
                         iMFHI(allegrex, instr);
                         break;
+                    case SPECIAL::MTHI:
+                        iMTHI(allegrex, instr);
+                        break;
                     case SPECIAL::MFLO:
                         iMFLO(allegrex, instr);
+                        break;
+                    case SPECIAL::MTLO:
+                        iMTLO(allegrex, instr);
                         break;
                     case SPECIAL::CLZ:
                         iCLZ(allegrex, instr);
@@ -1659,6 +1705,21 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case COPOpcode::CTC:
                         iCTC(allegrex, 0, instr);
+                        break;
+                    case COPOpcode::CO:
+                        {
+                            const auto funct = getFunct(instr);
+
+                            switch ((COP0Opcode)funct) {
+                                case COP0Opcode::ERET:
+                                    iERET(allegrex, instr);
+                                    break;
+                                default:
+                                    std::printf("Unhandled %s COP0 operation 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, instr, cpc);
+
+                                    exit(0);
+                            }
+                        }
                         break;
                     default:
                         std::printf("Unhandled %s coprocessor instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rs, instr, cpc);
