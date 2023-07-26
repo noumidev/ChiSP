@@ -114,12 +114,6 @@ void Allegrex::setBranchPC(u32 addr) {
         exit(0);
     }
 
-    if ((addr == (pc - 4)) && (!memory::read32(addr + 4))) {
-        std::printf("Infinite loop @ 0x%08X\n", addr);
-
-        exit(0);
-    }
-
     npc = addr;
 }
 
@@ -181,7 +175,11 @@ void Allegrex::raiseException(Exception excode) {
         vector = cop0.getEBase();
     }
 
-    advanceDelay();
+    if (excode == Exception::Interrupt) {
+        advanceDelay();
+    } else {
+        pc -= 4; // Synchronous exceptions point at the instruction that caused it
+    }
 
     // Set exception PC
     if (!cop0.isEXL()) {
