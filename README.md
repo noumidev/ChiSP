@@ -6,4 +6,4 @@
 
 # Milestones
  - Reads IPL from NAND, decrypts IPL with KIRK
- - Loads main.bin (second IPL stage)
+ - Loads and runs all IPL stages
