@@ -32,6 +32,9 @@ void checkInterrupt() {
 
 u32 read(u32 addr) {
     switch ((INTCRegs)addr) {
+        case INTCRegs::UNKNOWN0:
+        case INTCRegs::UNKNOWN1:
+        case INTCRegs::UNKNOWN2:
         case INTCRegs::FLAG0:
         case INTCRegs::FLAG1:
         case INTCRegs::FLAG2:
@@ -54,11 +57,6 @@ u32 read(u32 addr) {
                 return mask[idx];
             }
             break;
-        case INTCRegs::UNKNOWN0:
-        case INTCRegs::UNKNOWN1:
-        case INTCRegs::UNKNOWN2:
-            std::printf("[INTC    ] Unknown read @ 0x%08X\n", addr);
-            return 0;
         default:
             std::printf("[INTC    ] Unhandled read @ 0x%08X\n", addr);
 
@@ -130,6 +128,27 @@ void sendIRQ(InterruptSource irqSource) {
 
         setIRQPending(true); // Always pending if we get here
     }
+}
+
+void clearIRQ(InterruptSource irqSource) {
+    auto irqNum = (u32)irqSource;
+
+    // Get the right flag/mask regs
+    u32 *irqFlag;
+    if (irqNum < 32) {
+        irqFlag = &flag[0];
+    } else if (irqNum < 64) {
+        irqFlag = &flag[1];
+    } else {
+        irqFlag = &flag[2];
+    }
+
+    // Mask number to 0-31 range
+    irqNum &= 0x1F;
+
+    *irqFlag &= ~(1 << irqNum);
+
+    checkInterrupt();
 }
 
 }
