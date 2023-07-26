@@ -124,6 +124,7 @@ enum class REGIMM {
     BLTZ  = 0x00,
     BGEZ  = 0x01,
     BLTZL = 0x02,
+    BGEZL = 0x03,
     BLTZAL = 0x10,
     BGEZAL = 0x11,
 };
@@ -314,6 +315,22 @@ void iBGEZAL(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] BGEZAL %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
+// Branch if Greater than or Equal Zero Likely
+void iBGEZL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s >= 0, Reg::R0, true);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BGEZL %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
     }
 }
 
@@ -1446,6 +1463,9 @@ i64 doInstr(Allegrex *allegrex) {
                     case REGIMM::BLTZL:
                         iBLTZL(allegrex, instr);
                         break;
+                    case REGIMM::BGEZL:
+                        iBGEZL(allegrex, instr);
+                        break;
                     case REGIMM::BLTZAL:
                         iBLTZAL(allegrex, instr);
                         break;
@@ -1636,6 +1656,8 @@ i64 doInstr(Allegrex *allegrex) {
 void run(Allegrex *allegrex, i64 runCycles) {
     for (i64 i = 0; i < runCycles;) {
         cpc = allegrex->getPC();
+
+        if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0);
 
         allegrex->advanceDelay();
 
