@@ -16,17 +16,12 @@ const char *cop0Name[] = {
     "COP0:CPU", "COP0:ME ",
 };
 
-enum class ControlReg {
-    V0 = 0x04,
-    ErrorHandler = 0x09,
-    Unknown17 = 0x11,
-};
-
 enum class StatusReg {
     Status = 0x0C,
     Cause  = 0x0D,
     Config = 0x10,
     CPUId = 0x16,
+    EBase = 0x19,
     TagLo = 0x1C,
     TagHi = 0x1D,
 };
@@ -40,30 +35,11 @@ void COP0::init(int cpuID) {
 }
 
 u32 COP0::getControl(int idx) {
-    switch ((ControlReg)idx) {
-        default:
-            std::printf("Unhandled %s control read @ %d\n", cop0Name[cpuID], idx);
-
-            exit(0);
-    }
+    return cregs[idx];
 }
 
 void COP0::setControl(int idx, u32 data) {
-    switch ((ControlReg)idx) {
-        case ControlReg::V0:
-            v0 = data;
-            break;
-        case ControlReg::ErrorHandler:
-            errorHandler = data;
-            break;
-        case ControlReg::Unknown17:
-            unknown17 = data;
-            break;
-        default:
-            std::printf("Unhandled %s control write @ %d = 0x%08X\n", cop0Name[cpuID], idx, data);
-
-            exit(0);
-    }
+    cregs[idx] = data;
 }
 
 u32 COP0::getStatus(int idx) {
@@ -92,6 +68,9 @@ void COP0::setStatus(int idx, u32 data) {
             break;
         case StatusReg::Cause:
             cause = data;
+            break;
+        case StatusReg::EBase:
+            ebase = data;
             break;
         case StatusReg::TagLo:
             tagLo = data;

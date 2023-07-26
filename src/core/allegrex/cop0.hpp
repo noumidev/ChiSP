@@ -21,12 +21,11 @@ private:
     // Status
     u32 cpuID;
     u32 status, cause;
+    u32 ebase;
     u32 tagLo, tagHi;
 
     // Control
-    u32 v0;
-    u32 errorHandler;
-    u32 unknown17;
+    u32 cregs[32];
 };
 
 }
