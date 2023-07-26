@@ -20,6 +20,7 @@ struct COP0 {
 private:
     // Status
     u32 cpuID;
+    u32 count, compare;
     u32 status, cause;
     u32 ebase;
     u32 tagLo, tagHi;

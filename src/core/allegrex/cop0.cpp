@@ -17,6 +17,8 @@ const char *cop0Name[] = {
 };
 
 enum class StatusReg {
+    Count   = 0x09,
+    Compare = 0x0B,
     Status = 0x0C,
     Cause  = 0x0D,
     Config = 0x10,
@@ -44,6 +46,10 @@ void COP0::setControl(int idx, u32 data) {
 
 u32 COP0::getStatus(int idx) {
     switch ((StatusReg)idx) {
+        case StatusReg::Count:
+            return count;
+        case StatusReg::Compare:
+            return compare;
         case StatusReg::Status:
             return status;
         case StatusReg::Config:
@@ -63,6 +69,12 @@ u32 COP0::getStatus(int idx) {
 
 void COP0::setStatus(int idx, u32 data) {
     switch ((StatusReg)idx) {
+        case StatusReg::Count:
+            count = data;
+            break;
+        case StatusReg::Compare:
+            compare = data;
+            break;
         case StatusReg::Status:
             status = data;
             break;
