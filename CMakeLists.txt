@@ -24,6 +24,7 @@ set(SOURCES
     src/core/psp.cpp
     src/core/scheduler.cpp
     src/core/syscon.cpp
+    src/core/systime.cpp
     src/core/allegrex/allegrex.cpp
     src/core/allegrex/cop0.cpp
     src/core/allegrex/interpreter.cpp
@@ -42,6 +43,7 @@ set(HEADERS
     src/core/psp.hpp
     src/core/scheduler.hpp
     src/core/syscon.hpp
+    src/core/systime.hpp
     src/core/allegrex/allegrex.hpp
     src/core/allegrex/cop0.hpp
     src/core/allegrex/interpreter.hpp

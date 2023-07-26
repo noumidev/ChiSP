@@ -16,6 +16,7 @@
 #include "i2c.hpp"
 #include "nand.hpp"
 #include "syscon.hpp"
+#include "systime.hpp"
 #include "crypto/kirk.hpp"
 #include "../common/file.hpp"
 
@@ -133,6 +134,8 @@ u32 read32(u32 addr) {
         return syscon::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
         return intc::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
+        return systime::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
@@ -231,6 +234,8 @@ void write32(u32 addr, u32 data) {
         return syscon::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
         return intc::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
+        return systime::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
