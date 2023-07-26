@@ -12,6 +12,7 @@
 
 #include "ddr.hpp"
 #include "gpio.hpp"
+#include "intc.hpp"
 #include "i2c.hpp"
 #include "nand.hpp"
 #include "syscon.hpp"
@@ -130,6 +131,8 @@ u32 read32(u32 addr) {
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
+        return intc::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
@@ -226,6 +229,8 @@ void write32(u32 addr, u32 data) {
         std::printf("[MEMPROT ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
         return syscon::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
+        return intc::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {

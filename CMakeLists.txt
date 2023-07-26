@@ -17,6 +17,7 @@ set(SOURCES
     src/main.cpp
     src/core/ddr.cpp
     src/core/gpio.cpp
+    src/core/intc.cpp
     src/core/i2c.cpp
     src/core/memory.cpp
     src/core/nand.cpp
@@ -34,6 +35,7 @@ set(HEADERS
     src/common/types.hpp
     src/core/ddr.hpp
     src/core/gpio.hpp
+    src/core/intc.hpp
     src/core/i2c.hpp
     src/core/memory.hpp
     src/core/nand.hpp
