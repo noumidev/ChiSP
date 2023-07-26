@@ -9,6 +9,10 @@
 
 namespace psp::allegrex::cop0 {
 
+enum class Exception {
+    Interrupt = 0,
+};
+
 struct COP0 {
     void init(int cpuID);
 
@@ -18,6 +22,25 @@ struct COP0 {
     u32  getStatus(int idx);
     void setStatus(int idx, u32 data);
 
+    u32 getEBase();
+
+    void setEPC(u32 pc);
+
+    bool isBEV();
+
+    bool isEXL();
+    void setEXL(bool exl);
+
+    bool getIC();
+    void setIC(bool ic);
+
+    void setEXCODE(Exception excode);
+    void setBD(bool bd);
+
+    bool isInterruptPending();
+    void setIRQPending(bool irqPending);
+
+    void exceptionEntry();
     u32 exceptionReturn();
 private:
     // Status

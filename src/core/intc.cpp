@@ -8,6 +8,8 @@
 #include <cassert>
 #include <cstdio>
 
+#include "psp.hpp"
+
 namespace psp::intc {
 
 enum class INTCRegs {
@@ -23,6 +25,10 @@ enum class INTCRegs {
 };
 
 u32 flag[3], mask[3];
+
+void checkInterrupt() {
+    setIRQPending((flag[0] & mask[0]) | (flag[1] & mask[1]) | (flag[2] & mask[2]));
+}
 
 u32 read(u32 addr) {
     switch ((INTCRegs)addr) {
@@ -93,6 +99,36 @@ void write(u32 addr, u32 data) {
             std::printf("[INTC    ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
 
             exit(0);
+    }
+
+    checkInterrupt();
+}
+
+void sendIRQ(InterruptSource irqSource) {
+    auto irqNum = (u32)irqSource;
+
+    std::printf("[INTC    ] Requesting interrupt %u\n", irqNum);
+
+    // Get the right flag/mask regs
+    u32 *irqFlag, *irqMask;
+    if (irqNum < 32) {
+        irqFlag = &flag[0];
+        irqMask = &mask[0];
+    } else if (irqNum < 64) {
+        irqFlag = &flag[1];
+        irqMask = &mask[1];
+    } else {
+        irqFlag = &flag[2];
+        irqMask = &mask[2];
+    }
+
+    // Mask number to 0-31 range
+    irqNum &= 0x1F;
+
+    if (*irqMask & (1 << irqNum)) {
+        *irqFlag |= 1 << irqNum;
+
+        setIRQPending(true); // Always pending if we get here
     }
 }
 

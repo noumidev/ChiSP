@@ -29,9 +29,19 @@ enum class StatusReg {
     TagHi = 0x1D,
 };
 
+enum Cause {
+    EXCODE = 0x1F << 2,
+    IP  = 0x23 << 10,
+    IP0 = 1 << 10,
+    BD  = 1 << 31,
+};
+
 enum Status {
+    IE  = 1 << 0,
     EXL = 1 << 1,
     ERL = 1 << 2,
+    IM  = 0x23 << 10,
+    BEV = 1 << 22,
 };
 
 void COP0::init(int cpuID) {
@@ -108,6 +118,58 @@ void COP0::setStatus(int idx, u32 data) {
 
             exit(0);
     }
+}
+
+u32 COP0::getEBase() {
+    return ebase;
+}
+
+void COP0::setEPC(u32 pc) {
+    epc = pc;
+}
+
+bool COP0::isBEV() {
+    return status & Status::BEV;
+}
+
+bool COP0::isEXL() {
+    return status & Status::EXL;
+}
+
+void COP0::setEXL(bool exl) {
+    status &= ~Status::EXL;
+    status |= (u32)exl << 1;
+}
+
+// NOTE: yes, IC is just ERL
+bool COP0::getIC() {
+    return status & Status::ERL;
+}
+
+// NOTE: yes, IC is just ERL
+void COP0::setIC(bool ic) {
+    status &= ~Status::ERL;
+    status |= (u32)ic << 2;
+}
+
+void COP0::setEXCODE(Exception excode) {
+    cause &= ~Cause::EXCODE;
+    cause |= (u32)excode << 2;
+}
+
+void COP0::setBD(bool bd) {
+    cause &= ~Cause::BD;
+    cause |= (u32)bd << 31;
+}
+
+bool COP0::isInterruptPending() {
+    return (status & Status::IE) && !getIC() && !(status & Status::EXL) && ((status & Status::IM) & (cause & Cause::IP));
+}
+
+void COP0::setIRQPending(bool irqPending) {
+    // Clear old interrupt pending bit, set new value
+    cause &= ~Cause::IP0;
+    cause |= (u32)irqPending << 10;
 }
 
 // Return appropriate EPC, clear exception/error flag

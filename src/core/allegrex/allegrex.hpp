@@ -12,6 +12,8 @@
 namespace psp::allegrex {
 
 using cop0::COP0;
+using cop0::Exception;
+
 using fpu::FPU;
 
 enum class Type {
@@ -38,6 +40,10 @@ struct Allegrex {
 
     void doBranch(u32 target, bool cond, int linkReg, bool isLikely);
 
+    void checkInterrupt();
+    void setIRQPending(bool irqPending);
+
+    void raiseException(Exception ex);
     void exceptionReturn();
 
     // Read/write handlers
@@ -53,13 +59,13 @@ struct Allegrex {
     COP0 cop0;
     FPU  fpu;
 
-    u32 ic;
+    bool isHalted;
 
 private:
     Type type; // CPU type
 
-    u32 regs[34];     // 32 GPRs, LO, HI
-    u32 pc, npc; // Program counters
+    u32 regs[34]; // 32 GPRs, LO, HI
+    u32 pc, npc;  // Program counters
 
     bool inDelaySlot[2]; // Delay slot helper
 

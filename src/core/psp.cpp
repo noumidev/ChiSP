@@ -31,6 +31,18 @@ void init(const char *bootPath, const char *nandPath) {
     std::puts("[PSP     ] OK");
 }
 
+void run() {
+    while (true) {
+        const auto runCycles = scheduler::getRunCycles();
+
+        interpreter::run(&cpu, runCycles);
+    }
+}
+
+void setIRQPending(bool irqPending) {
+    cpu.setIRQPending(irqPending);
+}
+
 void resetCPU() {
     static auto hasReset = false;
 
@@ -40,14 +52,6 @@ void resetCPU() {
         memory::unmapBootROM();
 
         hasReset = true;
-    }
-}
-
-void run() {
-    while (true) {
-        const auto runCycles = scheduler::getRunCycles();
-
-        interpreter::run(&cpu, runCycles);
     }
 }
 

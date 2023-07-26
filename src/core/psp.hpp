@@ -8,8 +8,9 @@
 namespace psp {
 
 void init(const char *bootPath, const char *nandPath);
-void resetCPU();
-
 void run();
+
+void setIRQPending(bool irqPending);
+void resetCPU();
 
 }

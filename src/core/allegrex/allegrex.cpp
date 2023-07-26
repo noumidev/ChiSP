@@ -154,6 +154,59 @@ void Allegrex::doBranch(u32 target, bool cond, int linkReg, bool isLikely) {
     }
 }
 
+void Allegrex::checkInterrupt() {
+    if (cop0.isInterruptPending()) {
+        raiseException(Exception::Interrupt);
+    }
+}
+
+void Allegrex::setIRQPending(bool irqPending) {
+    cop0.setIRQPending(irqPending);
+
+    checkInterrupt();
+}
+
+// Raises exception (Level 1)
+void Allegrex::raiseException(Exception excode) {
+    std::printf("[%s] Exception 0x%02X @ 0x%08X\n", typeNames[(int)type], (u32)excode, pc);
+
+    isHalted = false;
+
+    cop0.setEXCODE(excode);
+
+    u32 vector;
+    if (cop0.isBEV()) {
+        vector = 0xBFC00200;
+    } else {
+        vector = cop0.getEBase();
+    }
+    
+    if (excode == Exception::Interrupt) {
+        vector += 0x200;
+    } else {
+        vector += 0x180;
+    }
+
+    advanceDelay();
+
+    // Set exception PC
+    if (!cop0.isEXL()) {
+        cop0.setBD(inDelaySlot[0]);
+
+        if (inDelaySlot[0]) {
+            cop0.setEPC(pc - 4);
+        } else {
+            cop0.setEPC(pc);
+        }
+    }
+
+    inDelaySlot[0] = inDelaySlot[1] = false;
+
+    cop0.setEXL(true);
+
+    setPC(vector);
+}
+
 void Allegrex::exceptionReturn() {
     // Clear load linked bit
     ll = false;
