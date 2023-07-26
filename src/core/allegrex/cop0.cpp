@@ -23,6 +23,7 @@ enum class StatusReg {
     Cause  = 0x0D,
     EPC = 0x0E,
     Config = 0x10,
+    SCCode = 0x15,
     CPUId = 0x16,
     EBase = 0x19,
     TagLo = 0x1C,
@@ -68,10 +69,14 @@ u32 COP0::getStatus(int idx) {
             return compare;
         case StatusReg::Status:
             return status;
+        case StatusReg::Cause:
+            return cause;
         case StatusReg::EPC:
             return epc;
         case StatusReg::Config:
             return CONFIG;
+        case StatusReg::SCCode:
+            return scCode;
         case StatusReg::CPUId:
             return cpuID;
         case StatusReg::EBase:
@@ -90,9 +95,11 @@ u32 COP0::getStatus(int idx) {
 void COP0::setStatus(int idx, u32 data) {
     switch ((StatusReg)idx) {
         case StatusReg::Count:
+            std::printf("COUNT: 0x%08X\n", data);
             count = data;
             break;
         case StatusReg::Compare:
+            std::printf("COMPARE: 0x%08X\n", data);
             compare = data;
             break;
         case StatusReg::Status:
@@ -170,6 +177,10 @@ void COP0::setIRQPending(bool irqPending) {
     // Clear old interrupt pending bit, set new value
     cause &= ~Cause::IP0;
     cause |= (u32)irqPending << 10;
+}
+
+void COP0::setSyscallCode(u32 code) {
+    scCode = code << 2;
 }
 
 // Return appropriate EPC, clear exception/error flag

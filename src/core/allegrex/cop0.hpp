@@ -10,7 +10,8 @@
 namespace psp::allegrex::cop0 {
 
 enum class Exception {
-    Interrupt = 0,
+    Interrupt  = 0x00,
+    SystemCall = 0x08,
 };
 
 struct COP0 {
@@ -40,7 +41,8 @@ struct COP0 {
     bool isInterruptPending();
     void setIRQPending(bool irqPending);
 
-    void exceptionEntry();
+    void setSyscallCode(u32 code);
+
     u32 exceptionReturn();
 private:
     // Status
@@ -48,6 +50,7 @@ private:
     u32 count, compare;
     u32 status, cause;
     u32 epc;
+    u32 scCode;
     u32 ebase;
     u32 tagLo, tagHi;
 
