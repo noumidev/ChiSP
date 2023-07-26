@@ -73,6 +73,8 @@ enum class Opcode {
     SW  = 0x2B,
     SWR = 0x2E,
     CACHE = 0x2F,
+    LWC1  = 0x31,
+    SWC1  = 0x39,
 };
 
 enum class SPECIAL {
@@ -782,6 +784,37 @@ void iLW(Allegrex *allegrex, u32 instr) {
     allegrex->set(rt, allegrex->read32(addr));
 }
 
+// Load Word Coprocessor
+void iLWC(Allegrex *allegrex, int copN, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] LWC%d %u, 0x%X(%s); %s = [0x%08X]\n", allegrex->getTypeName(), cpc, copN, rt, imm, regNames[rs], regNames[rt], addr);
+    }
+
+    if (addr & 3) {
+        std::printf("Misaligned %s LWC address 0x%08X, PC: 0x%08X\n", allegrex->getTypeName(), addr, cpc);
+
+        exit(0);
+    }
+
+    const auto data = allegrex->read32(addr);
+
+    switch (copN) {
+        case 1:
+            allegrex->fpu.set(rt, data);
+            break;
+        default:
+            std::printf("Unhandled %s LWC coprocessor %d\n", allegrex->getTypeName(), copN);
+
+            exit(0);
+    }
+}
+
 /* Load Word Left */
 void iLWL(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -1296,6 +1329,38 @@ void iSW(Allegrex *allegrex, u32 instr) {
     allegrex->write32(addr, data);
 }
 
+// Store Word Coprocessor
+void iSWC(Allegrex *allegrex, int copN, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+    const auto imm = (i32)(i16)getImm(instr);
+
+    const auto addr = allegrex->get(rs) + imm;
+    
+    u32 data;
+    switch (copN) {
+        case 1:
+            data = allegrex->fpu.get(rt);
+            break;
+        default:
+            std::printf("Unhandled %s SWC coprocessor %d\n", allegrex->getTypeName(), copN);
+
+            exit(0);
+    }
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SWC%d %u, 0x%X(%s); [0x%08X] = 0x%08X\n", allegrex->getTypeName(), cpc, copN, rt, imm, regNames[rs], addr, data);
+    }
+
+    if (addr & 3) {
+        std::printf("Misaligned %s SWC address 0x%08X, PC: 0x%08X\n", allegrex->getTypeName(), addr, cpc);
+
+        exit(0);
+    }
+
+    allegrex->write32(addr, data);
+}
+
 /* Store Word Left */
 void iSWL(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -1730,6 +1795,12 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::CACHE:
             iCACHE(allegrex, instr);
+            break;
+        case Opcode::LWC1:
+            iLWC(allegrex, 1, instr);
+            break;
+        case Opcode::SWC1:
+            iSWC(allegrex, 1, instr);
             break;
         default:
             std::printf("Unhandled %s instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), opcode, instr, cpc);
