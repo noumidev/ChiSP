@@ -9,16 +9,19 @@
 #include <cassert>
 #include <cstdio>
 
+#include "scheduler.hpp"
 #include "../common/file.hpp"
 
 namespace psp::nand {
+
+constexpr i64 NAND_OP_CYCLES = 1024;
 
 constexpr u64 PAGE_SIZE = 512;
 constexpr u64 PAGE_SIZE_ECC = PAGE_SIZE + 16;
 constexpr u64 BLOCK_SIZE = 32 * PAGE_SIZE_ECC;
 constexpr u64 NAND_SIZE  = 2048 * BLOCK_SIZE;
 
-constexpr u32 NAND_ID = 0x35EC;
+constexpr u32 NAND_ID[2] = {0xEC, 0x35};
 
 enum class NANDReg {
     CONTROL = 0x1D101000,
@@ -35,9 +38,11 @@ enum class NANDReg {
 };
 
 enum class NANDCommand {
-    READ2 = 0x50,
+    READ_SPARE = 0x50,
+    BLOCK_ERASE = 0x60,
     READ_STATUS = 0x70,
     READ_ID = 0x90,
+    BLOCK_ERASE2 = 0xD0,
     RESET = 0xFF,
 };
 
@@ -49,7 +54,7 @@ enum class NANDStatus {
 
 enum class NANDState {
     IDLE,
-    READ_PAGE,
+    READ_SPARE,
 };
 
 enum STATUS {
@@ -67,14 +72,16 @@ std::array<u8, NAND_SIZE> nand;
 std::array<u8, PAGE_SIZE_ECC> nandBuffer;
 
 // NAND serial data
-std::array<u8, BLOCK_SIZE> serialData;
+u8 *serialData;
 u32 serialIdx, serialSize;
 
-u32 control, status, nandpage, dmapage, dmactrl, dmaintr;
+u32 control, nandpage, dmapage, dmactrl, dmaintr;
 
-u8 deviceStatus; // NAND chip status
+u32 deviceStatus = (u32)NANDStatus::WRITE_PROTECT | (u32)NANDStatus::DEVICE_READY; // NAND chip status
 
 NANDState state = NANDState::IDLE;
+
+u64 idFinishTransfer;
 
 void setSerialSize(u32 size) {
     serialSize = size;
@@ -82,37 +89,47 @@ void setSerialSize(u32 size) {
 }
 
 u32 getSerialData() {
-    const auto data = serialData[serialIdx];
+    u32 data;
+    std::memcpy(&data, &serialData[serialIdx], sizeof(u32));
 
-    serialIdx = (serialIdx + 1) % serialSize;
+    serialIdx = (serialIdx + 4) % serialSize;
 
     return data;
 }
 
 void doCommand(u8 cmd) {
     switch ((NANDCommand)cmd) {
-        case NANDCommand::READ2:
-            std::puts("[NAND    ] Read (2)");
+        case NANDCommand::READ_SPARE:
+            std::puts("[NAND    ] Read Spare Array");
 
-            state = NANDState::READ_PAGE; // Next write to PAGE triggers a read
+            state = NANDState::READ_SPARE; // Next write to PAGE triggers a read
+            break;
+        case NANDCommand::BLOCK_ERASE:
+            std::puts("[NAND    ] Block Erase");
             break;
         case NANDCommand::READ_STATUS:
             std::puts("[NAND    ] Read Status");
 
-            serialData[0] = deviceStatus;
-            setSerialSize(1);
+            serialData = (u8 *)&deviceStatus;
+            setSerialSize(4);
             break;
         case NANDCommand::READ_ID:
             std::puts("[NAND    ] Read ID");
 
-            serialData[0] = (u8)NAND_ID;
-            serialData[1] = (u8)(NAND_ID >> 8);
-            setSerialSize(2);
+            serialData = (u8 *)&NAND_ID;
+            setSerialSize(8);
+            break;
+        case NANDCommand::BLOCK_ERASE2:
+            std::printf("[NAND    ] Erasing block 0x%X\n", nandpage);
+
+            assert(!(nandpage & 0x1F));
+
+            std::memset(&nand[PAGE_SIZE_ECC * nandpage], 0xFF, BLOCK_SIZE);
             break;
         case NANDCommand::RESET:
             std::puts("[NAND    ] Reset");
 
-            status = STATUS::NAND_READY;
+            deviceStatus = (u32)NANDStatus::WRITE_PROTECT | (u32)NANDStatus::DEVICE_READY;
             break;
         default:
             std::printf("Unhandled NAND command 0x%02X\n", cmd);
@@ -128,57 +145,25 @@ void doDMA(bool toNAND, bool isPageEnabled, bool isSpareEnabled) {
 
     std::memcpy(nandBuffer.data(), &nand[PAGE_SIZE_ECC * dmapage], PAGE_SIZE_ECC);
 
-    // Clear DMA busy bit
-    dmactrl &= ~DMA_BUSY;
-
     std::puts("NAND buffer is:");
     for (u64 i = 0; i < PAGE_SIZE_ECC; i += 16) {
         std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&nandBuffer[i], *(u32 *)&nandBuffer[i + 4], *(u32 *)&nandBuffer[i + 8], *(u32 *)&nandBuffer[i + 12]);
     }
-
-    dmaintr |= 2;
 }
 
-// Algorithm taken from: https://www.psdevwiki.com/psp/NAND_Flash_Memory#ECC_algorithms
-u8 getParity(u8 byte) {
-    return ((0x6996 >> (byte & 0xF)) ^ (0x6996 >> (byte >> 4))) & 1;
+void startTransfer() {
+    deviceStatus &= ~(u32)NANDStatus::DEVICE_READY;
+
+    scheduler::addEvent(idFinishTransfer, 0, NAND_OP_CYCLES);
 }
 
-// Generates an ECC for the current page in the NAND buffer
-// Algorithm taken from: https://www.psdevwiki.com/psp/NAND_Flash_Memory#ECC_algorithm_for_the_page_data
-u32 generateECC() {
-    u8 output[24];
-    std::memset(output, 0, sizeof(output));
+void finishTransfer() {
+    doDMA(dmactrl & DMACTRL::TO_NAND, dmactrl & DMACTRL::PAGE_DATA_EN, dmactrl & DMACTRL::SPARE_DATA_EN);
 
-    for (int i = 0; i < (int)PAGE_SIZE; i++) {
-        const auto byte = nandBuffer[i];
+    dmactrl &= ~DMACTRL::DMA_BUSY; // Clear DMA busy bit
+    dmaintr |= 3;                  // ??? Maybe? This seems to work
 
-        const auto parity = getParity(byte);
-
-        for (int j = 0; j < 9; j++) {
-            if (i & (1 << j)) {
-                output[1 + 2 * j] ^= parity;
-            } else {
-                output[2 * j] ^= parity;
-            }
-
-            output[18] ^= ((byte >> 6) ^ (byte >> 4) ^ (byte >> 2) ^ (byte >> 0)) & 1;
-            output[19] ^= ((byte >> 7) ^ (byte >> 5) ^ (byte >> 3) ^ (byte >> 1)) & 1;
-            output[20] ^= ((byte >> 5) ^ (byte >> 4) ^ (byte >> 1) ^ (byte >> 0)) & 1;
-            output[21] ^= ((byte >> 7) ^ (byte >> 6) ^ (byte >> 3) ^ (byte >> 2)) & 1;
-            output[22] ^= ((byte >> 3) ^ (byte >> 2) ^ (byte >> 1) ^ (byte >> 0)) & 1;
-            output[23] ^= ((byte >> 7) ^ (byte >> 6) ^ (byte >> 5) ^ (byte >> 4)) & 1;
-        }
-    }
-
-    u32 result = 0;
-    for (int i = 0; i < 24; i++) {
-        result |= (u32)output[i] << i;
-    }
-
-    std::printf("[NAND    ] ECC is: 0x%08X\n", result);
-
-    return result;
+    deviceStatus |= (u32)NANDStatus::DEVICE_READY;
 }
 
 // Loads a NAND image
@@ -186,7 +171,7 @@ void init(const char *nandPath) {
     std::printf("[NAND    ] Loading NAND image \"%s\"\n", nandPath);
     assert(loadFile(nandPath, nand.data(), NAND_SIZE));
 
-    deviceStatus = (u32)NANDStatus::DEVICE_READY;
+    idFinishTransfer = scheduler::registerEvent([](int) {finishTransfer();});
 
     std::puts("[NAND    ] OK");
 }
@@ -200,7 +185,7 @@ u32 read(u32 addr) {
             return control;
         case NANDReg::STATUS:
             std::puts("[NAND    ] Read @ STATUS");
-            return status;
+            return (deviceStatus & 0x80) | ((deviceStatus >> 6) & 1);
         case NANDReg::DMACTRL:
             std::puts("[NAND    ] Read @ DMACTRL");
             return dmactrl;
@@ -232,8 +217,6 @@ void write(u32 addr, u32 data) {
             break;
         case NANDReg::STATUS: // ??
             std::printf("[NAND    ] Write @ STATUS = 0x%08X\n", data);
-
-            status |= data & 0x80; // Write-protect
             break;
         case NANDReg::COMMAND:
             std::printf("[NAND    ] Write @ COMMAND = 0x%08X\n", data);
@@ -245,14 +228,20 @@ void write(u32 addr, u32 data) {
 
             nandpage = (data >> 10) & 0x1FFFF;
 
-            if (state == NANDState::READ_PAGE) {
-                std::printf("[NAND    ] Reading page 0x%X\n", nandpage);
+            assert(!(data & 0x3FF) && (nandpage < 0x10000));
 
-                std::memcpy(&serialData[0], &nand[PAGE_SIZE_ECC * nandpage], PAGE_SIZE);
-                setSerialSize(PAGE_SIZE);
+            switch (state) {
+                case NANDState::READ_SPARE:
+                    std::printf("[NAND    ] Reading spare array of page 0x%X\n", nandpage);
 
-                state = NANDState::IDLE;
+                    serialData = &nand[PAGE_SIZE_ECC * nandpage + PAGE_SIZE];
+                    setSerialSize(16);
+                    break;
+                default:
+                    break;
             }
+
+            state = NANDState::IDLE;
             break;
         case NANDReg::RESET:
             std::printf("[NAND    ] Write @ RESET = 0x%08X\n", data);
@@ -261,13 +250,15 @@ void write(u32 addr, u32 data) {
             std::printf("[NAND    ] Write @ DMAPAGE = 0x%08X\n", data);
 
             dmapage = (data >> 10) & 0x1FFFF;
+
+            assert(!(data & 0x3FF) && (dmapage < 0x10000));
             break;
         case NANDReg::DMACTRL:
             std::printf("[NAND    ] Write @ DMACTRL = 0x%08X\n", data);
 
             dmactrl = data;
 
-            if (data & DMA_BUSY) doDMA(data & TO_NAND, data & PAGE_DATA_EN, data & SPARE_DATA_EN);
+            if (data & DMA_BUSY) startTransfer();
             break;
         case NANDReg::DMAINTR:
             std::printf("[NAND    ] Write @ DMAINTR = 0x%08X\n", data);
@@ -292,8 +283,9 @@ u32 readBuffer32(u32 addr) {
         std::memcpy(&data, &nandBuffer[addr & (PAGE_SIZE - 1)], sizeof(u32));
     } else {
         switch (addr) {
-            case 0x1FF00800: // ECC
-                return generateECC();
+            case 0x1FF00800:
+                std::memcpy(&data, &nandBuffer[PAGE_SIZE + 0x0], sizeof(u32));
+                break;
             case 0x1FF00900:
                 std::memcpy(&data, &nandBuffer[PAGE_SIZE + 0x4], sizeof(u32));
                 break;
