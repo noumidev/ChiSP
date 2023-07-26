@@ -114,8 +114,6 @@ u16 read16(u32 addr) {
 }
 
 u32 read32(u32 addr) {
-    if (addr == 0x884255A0) return 1 << 0xC; // For printf hook
-
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
     u32 data;
