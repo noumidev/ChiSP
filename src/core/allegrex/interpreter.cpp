@@ -56,6 +56,7 @@ enum class Opcode {
     COP0 = 0x10,
     BEQL = 0x14,
     BNEL = 0x15,
+    BLEZL = 0x16,
     SPECIAL2 = 0x1C,
     SPECIAL3 = 0x1F,
     LB  = 0x20,
@@ -382,6 +383,22 @@ void iBLEZ(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] BLEZ %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
+// Branch if Less than or Equal Zero Likely
+void iBLEZL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s <= 0, Reg::R0, true);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BLEZL %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
     }
 }
 
@@ -1547,6 +1564,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::BNEL:
             iBNEL(allegrex, instr);
+            break;
+        case Opcode::BLEZL:
+            iBLEZL(allegrex, instr);
             break;
         case Opcode::SPECIAL2:
             {
