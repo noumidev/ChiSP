@@ -9,6 +9,7 @@
 
 #include "memory.hpp"
 #include "nand.hpp"
+#include "scheduler.hpp"
 #include "allegrex/allegrex.hpp"
 #include "allegrex/interpreter.hpp"
 
@@ -41,7 +42,9 @@ void resetCPU() {
 
 void run() {
     while (true) {
-        interpreter::run(&cpu, 128);
+        const auto runCycles = scheduler::getRunCycles();
+
+        interpreter::run(&cpu, runCycles);
     }
 }
 

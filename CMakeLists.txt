@@ -21,6 +21,7 @@ set(SOURCES
     src/core/memory.cpp
     src/core/nand.cpp
     src/core/psp.cpp
+    src/core/scheduler.cpp
     src/core/syscon.cpp
     src/core/allegrex/allegrex.cpp
     src/core/allegrex/cop0.cpp
@@ -37,6 +38,7 @@ set(HEADERS
     src/core/memory.hpp
     src/core/nand.hpp
     src/core/psp.hpp
+    src/core/scheduler.hpp
     src/core/syscon.hpp
     src/core/allegrex/allegrex.hpp
     src/core/allegrex/cop0.hpp
