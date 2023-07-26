@@ -15,8 +15,11 @@
 #include <cryptopp/sha.h>
 
 #include "../memory.hpp"
+#include "../scheduler.hpp"
 
 namespace psp::kirk {
+
+constexpr i64 KIRK_OP_CYCLES = 8192;
 
 constexpr u64 KEY_SIZE  = 0x10;
 constexpr u64 HASH_SIZE = 0x10;
@@ -211,6 +214,8 @@ u32 asyncstat, asyncend;
 // Buffer addresses
 u32 srcAddr, dstAddr;
 
+u64 idFinishPhase1;
+
 // Decrypt data with AES (CBC with 0 IV)
 void kirkDecryptAES(const u8 *key, u8 *data, u64 size) {
     CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption(key, KEY_SIZE, AES_ZERO_IV).ProcessData(data, data, size);
@@ -362,8 +367,6 @@ void cmdGenerateSHA1() {
 }
 
 void doCommand() {
-    status &= ~STATUS::PHASE_1_DONE;
-
     switch ((KIRKCommand)cmd) {
         case KIRKCommand::DECRYPT_PRIVATE:
             cmdDecryptPrivate();
@@ -382,8 +385,20 @@ void doCommand() {
 
             exit(0);
     }
+}
+
+void finishPhase1() {
+    doCommand();
 
     status |= STATUS::PHASE_1_DONE;
+
+    // TODO: send interrupt request
+}
+
+void init() {
+    idFinishPhase1 = scheduler::registerEvent([](int) {finishPhase1();});
+
+    std::puts("[KIRK    ] OK");
 }
 
 u32 read(u32 addr) {
@@ -412,7 +427,11 @@ void write(u32 addr, u32 data) {
         case KIRKReg::PHASE:
             std::printf("[KIRK    ] Write @ PHASE = 0x%08X\n", data);
 
-            if (data & 1) doCommand();
+            if (data & 1) {
+                status &= ~STATUS::PHASE_1_DONE;
+
+                scheduler::addEvent(idFinishPhase1, 0, KIRK_OP_CYCLES);
+            }
 
             assert(!(data & 2));
             break;

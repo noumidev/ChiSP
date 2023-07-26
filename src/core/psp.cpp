@@ -12,6 +12,7 @@
 #include "scheduler.hpp"
 #include "allegrex/allegrex.hpp"
 #include "allegrex/interpreter.hpp"
+#include "crypto/kirk.hpp"
 
 namespace psp {
 
@@ -24,6 +25,8 @@ void init(const char *bootPath, const char *nandPath) {
     nand::init(nandPath);
 
     cpu.init(Type::Allegrex);
+
+    kirk::init();
 
     std::puts("[PSP     ] OK");
 }
