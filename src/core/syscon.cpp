@@ -29,6 +29,7 @@ enum class SysConReg {
     IOEN = 0x1C100078,
     GPIOEN = 0x1C10007C,
     FUSECONFIG = 0x1C100098,
+    UNKNOWN0 = 0x1C1000FC,
 };
 
 enum class SysConSerialReg {
@@ -317,6 +318,10 @@ u32 read(u32 addr) {
             std::puts("[SysCon  ] Read @ FUSECONFIG");
 
             return 0;
+        case SysConReg::UNKNOWN0:
+            std::printf("[SysCon  ] Unknown read @ 0x%08X\n", addr);
+
+            return 0;
         default:
             std::printf("[SysCon  ] Unhandled read @ 0x%08X\n", addr);
 
@@ -388,6 +393,9 @@ void write(u32 addr, u32 data) {
             std::printf("[SysCon  ] Write @ GPIOEN = 0x%08X\n", data);
 
             gpioen = data;
+            break;
+        case SysConReg::UNKNOWN0:
+            std::printf("[SysCon  ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
             break;
         default:
             std::printf("[SysCon  ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
