@@ -9,6 +9,8 @@
 
 namespace psp::syscon {
 
+void init();
+
 u32 read(u32 addr);
 u32 readSerial(u32 addr);
 

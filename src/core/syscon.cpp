@@ -11,8 +11,11 @@
 
 #include "gpio.hpp"
 #include "psp.hpp"
+#include "scheduler.hpp"
 
 namespace psp::syscon {
+
+constexpr i64 SYSCON_OP_CYCLES = 1024;
 
 constexpr u32 BARYON_VERSION  = 0x00110001;
 constexpr u32 TACHYON_VERSION = 0x40000001;
@@ -74,6 +77,8 @@ std::queue<u8> txQueue, rxQueue;
 
 // SysCon internal registers
 u32 powerStatus = 0;
+
+u64 idFinishCommand;
 
 u8 getTxQueue() {
     if (txQueue.empty()) {
@@ -276,6 +281,14 @@ void doCommand() {
     gpio::sendIRQ(gpio::GPIOInterrupt::SysCon);
 }
 
+void finishCommand() {
+    doCommand();
+}
+
+void init() {
+    idFinishCommand = scheduler::registerEvent([](int) {finishCommand();});
+}
+
 u32 read(u32 addr) {
     switch ((SysConReg)addr) {
         case SysConReg::NMIEN:
@@ -417,7 +430,7 @@ void writeSerial(u32 addr, u32 data) {
                     clearTxQueue();
                     break;
                 case 6:
-                    doCommand();
+                    scheduler::addEvent(idFinishCommand, 0, SYSCON_OP_CYCLES);
                     break;
                 default:
                     break;
