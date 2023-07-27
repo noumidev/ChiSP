@@ -17,6 +17,12 @@ struct FPU {
 
     u32  get(int idx);
     void set(int idx, u32 data);
+
+    f32  getF32(int idx);
+    void setF32(int idx, f32 data);
+
+    void doSingle(u32 instr);
+    void doWord(u32 instr);
 private:
     int cpuID;
 
@@ -25,6 +31,13 @@ private:
 
     // Control
     u32 cregs[32];
+
+    // FPU instructions
+    // Single
+    void iMUL(u32 instr);
+
+    // Word
+    void iCVTS(u32 instr);
 };
 
 }
