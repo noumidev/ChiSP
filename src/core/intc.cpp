@@ -13,14 +13,11 @@
 namespace psp::intc {
 
 enum class INTCRegs {
-    UNKNOWN0 = 0x1C300000,
-    FLAG0 = 0x1C300004,
+    FLAG0 = 0x1C300000,
     MASK0 = 0x1C300008,
-    UNKNOWN1 = 0x1C300010,
-    FLAG1 = 0x1C300014,
+    FLAG1 = 0x1C300010,
     MASK1 = 0x1C300018,
-    UNKNOWN2 = 0x1C300020,
-    FLAG2 = 0x1C300024,
+    FLAG2 = 0x1C300020,
     MASK2 = 0x1C300028,
 };
 
@@ -32,9 +29,6 @@ void checkInterrupt() {
 
 u32 read(u32 addr) {
     switch ((INTCRegs)addr) {
-        case INTCRegs::UNKNOWN0:
-        case INTCRegs::UNKNOWN1:
-        case INTCRegs::UNKNOWN2:
         case INTCRegs::FLAG0:
         case INTCRegs::FLAG1:
         case INTCRegs::FLAG2:
@@ -86,12 +80,8 @@ void write(u32 addr, u32 data) {
                 std::printf("[INTC    ] Write @ MASK%u = 0x%08X\n", idx, data);
 
                 mask[idx] = data;
+                flag[idx] &= data; // I think this clears FLAG?? Test this!
             }
-            break;
-        case INTCRegs::UNKNOWN0:
-        case INTCRegs::UNKNOWN1:
-        case INTCRegs::UNKNOWN2:
-            std::printf("[INTC    ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
             break;
         default:
             std::printf("[INTC    ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
@@ -128,27 +118,6 @@ void sendIRQ(InterruptSource irqSource) {
 
         setIRQPending(true); // Always pending if we get here
     }
-}
-
-void clearIRQ(InterruptSource irqSource) {
-    auto irqNum = (u32)irqSource;
-
-    // Get the right flag/mask regs
-    u32 *irqFlag;
-    if (irqNum < 32) {
-        irqFlag = &flag[0];
-    } else if (irqNum < 64) {
-        irqFlag = &flag[1];
-    } else {
-        irqFlag = &flag[2];
-    }
-
-    // Mask number to 0-31 range
-    irqNum &= 0x1F;
-
-    *irqFlag &= ~(1 << irqNum);
-
-    checkInterrupt();
 }
 
 }
