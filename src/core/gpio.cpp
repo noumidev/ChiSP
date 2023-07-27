@@ -8,6 +8,8 @@
 #include <cassert>
 #include <cstdio>
 
+#include "intc.hpp"
+
 namespace psp::gpio {
 
 enum class GPIOReg {
@@ -50,6 +52,10 @@ u32 read(u32 addr) {
             std::puts("[GPIO    ] Read @ READ");
 
             return 0;
+        case GPIOReg::IRQEN:
+            std::puts("[GPIO    ] Read @ IRQEN");
+
+            return irqen;
         case GPIOReg::IRQSTATUS:
             std::puts("[GPIO    ] Read @ IRQSTATUS");
 
@@ -136,6 +142,10 @@ void write(u32 addr, u32 data) {
 
 void sendIRQ(GPIOInterrupt irq) {
     irqstatus |= (u32)irq;
+
+    if (irqstatus & irqen) {
+        intc::sendIRQ(intc::InterruptSource::GPIO);
+    }
 }
 
 }
