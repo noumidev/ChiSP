@@ -8,6 +8,7 @@
 #include <bit>
 #include <cassert>
 #include <cstdio>
+#include <cstring>
 
 #include "allegrex.hpp"
 #include "../memory.hpp"
@@ -1942,15 +1943,23 @@ void run(Allegrex *allegrex, i64 runCycles) {
 
         cpc = allegrex->getPC();
 
-        if (cpc == 0x8802A900) {
-            std::printf("[PSP     ] %s", memory::getMemoryPointer(allegrex->get(Reg::A2)));
-        }
-
         if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0);
 
         allegrex->advanceDelay();
 
         i += doInstr(allegrex);
+
+        if (cpc == 0x8802AA20) { // Kernel printf hook
+            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
+            const auto size = allegrex->get(Reg::V0);
+
+            char msg[size + 1];
+
+            msg[size] = 0;
+            std::memcpy(msg, msgPtr, size);
+
+            std::printf("[PSP     ] %s\n", msg);
+        }
     }
 }
 
