@@ -43,7 +43,7 @@ struct Allegrex {
     void checkInterrupt();
     void setIRQPending(bool irqPending);
 
-    void raiseException(Exception ex);
+    void raiseException(Exception excode);
     void exceptionReturn();
 
     // Read/write handlers
