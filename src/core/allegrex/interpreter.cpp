@@ -145,6 +145,7 @@ enum class COPOpcode {
     MTC = 0x04,
     CTC = 0x06,
     CO  = 0x10,
+    W = 0x14,
 };
 
 enum class COP0Opcode {
@@ -1807,6 +1808,12 @@ i64 doInstr(Allegrex *allegrex) {
                     case COPOpcode::CTC:
                         iCTC(allegrex, 1, instr);
                         break;
+                    case COPOpcode::CO: // Actually Single instructions
+                        allegrex->fpu.doSingle(instr);
+                        break;
+                    case COPOpcode::W:
+                        allegrex->fpu.doWord(instr);
+                        break;
                     default:
                         std::printf("Unhandled %s coprocessor instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rs, instr, cpc);
 
@@ -1948,6 +1955,12 @@ void run(Allegrex *allegrex, i64 runCycles) {
         allegrex->advanceDelay();
 
         i += doInstr(allegrex);
+
+        if (cpc == 0x8800AB74) {
+            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
+
+            std::printf("[PSP     ] %s", msgPtr);
+        }
 
         if (cpc == 0x8802AA20) { // Kernel printf hook
             const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
