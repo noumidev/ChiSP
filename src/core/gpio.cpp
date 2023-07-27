@@ -21,6 +21,8 @@ enum class GPIOReg {
     IRQEN  = 0x1E24001C,
     IRQSTATUS = 0x1E240020,
     IRQACK = 0x1E240024,
+    CAPTEN = 0x1E240030,
+    TIMERCAPTEN = 0x1E240034,
     INEN = 0x1E240040,
     UNKNOWN = 0x1E240048,
 };
@@ -33,6 +35,8 @@ u32 irqen, irqstatus;
 
 // Clock edge detection
 u32 edgedetect, fallingedge, risingedge;
+
+u32 capten, timercapten;
 
 u32 unknown;
 
@@ -102,6 +106,16 @@ void write(u32 addr, u32 data) {
             std::printf("[GPIO    ] Write @ IRQACK = 0x%08X\n", data);
 
             irqstatus &= ~data;
+            break;
+        case GPIOReg::CAPTEN:
+            std::printf("[GPIO    ] Write @ CAPTEN = 0x%08X\n", data);
+
+            capten = data;
+            break;
+        case GPIOReg::TIMERCAPTEN:
+            std::printf("[GPIO    ] Write @ TIMERCAPTEN = 0x%08X\n", data);
+
+            timercapten = data;
             break;
         case GPIOReg::INEN:
             std::printf("[GPIO    ] Write @ INEN = 0x%08X\n", data);
