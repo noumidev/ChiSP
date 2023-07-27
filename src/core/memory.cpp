@@ -114,6 +114,8 @@ u16 read16(u32 addr) {
 }
 
 u32 read32(u32 addr) {
+    //if (addr == 0x88067848) writeFile("ram.bin", dram.data(), (u64)MemorySize::DRAM);
+
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
     u32 data;
@@ -138,20 +140,36 @@ u32 read32(u32 addr) {
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
         return systime::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::DMACplus, (u64)MemorySize::DMACplus)) {
+        std::printf("[DMACplus] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
         return nand::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
+        std::printf("[GE      ] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::LCDC, (u64)MemorySize::LCDC)) {
+        std::printf("[LCDC    ] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::I2C, (u64)MemorySize::I2C)) {
         return i2c::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
+        return gpio::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::POWERMAN, (u64)MemorySize::POWERMAN)) {
+        std::printf("[POWERMAN] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::UART0, (u64)MemorySize::UART)) {
         //std::printf("[UART0   ] Unhandled read @ 0x%08X\n", addr);
 
         return 0;
-    } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
-        return gpio::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
         return syscon::readSerial(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
@@ -240,22 +258,30 @@ void write32(u32 addr, u32 data) {
         std::printf("[Timer   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
         return systime::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::DMACplus, (u64)MemorySize::DMACplus)) {
+        std::printf("[DMACplus] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
         return nand::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
+        std::printf("[GE      ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::LCDC, (u64)MemorySize::LCDC)) {
+        std::printf("[LCDC    ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::I2C, (u64)MemorySize::I2C)) {
         return i2c::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
+        return gpio::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::POWERMAN, (u64)MemorySize::POWERMAN)) {
+        std::printf("[POWERMAN] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::UART0, (u64)MemorySize::UART)) {
         if (addr == (u32)MemoryBase::UART0) {
             std::putchar(data);
         } else {
             std::printf("[UART0   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
         }
-    } else if (inRange(addr, (u64)MemoryBase::GPIO, (u64)MemorySize::GPIO)) {
-        return gpio::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
         return syscon::writeSerial(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
