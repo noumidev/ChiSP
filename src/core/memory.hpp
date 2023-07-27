@@ -36,7 +36,7 @@ enum class MemorySize {
     EDRAM = 0x200000,
     DRAM  = 0x2000000,
     MEMPROT = 0x54,
-    SysCon  = 0xE8,
+    SysCon  = 0x104,
     INTC  = 0x2C,
     Timer = 0x404,
     SysTime = 0x14,
