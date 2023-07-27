@@ -114,7 +114,7 @@ u16 read16(u32 addr) {
 }
 
 u32 read32(u32 addr) {
-    //if (addr == 0x88067848) writeFile("ram.bin", dram.data(), (u64)MemorySize::DRAM);
+    //if (addr == 0x880402EC) writeFile("ram.bin", dram.data(), (u64)MemorySize::DRAM);
 
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
@@ -293,8 +293,14 @@ void write32(u32 addr, u32 data) {
             case 0x1D500010:
                 std::printf("[Memory  ] Unhandled write32 @ EDRAMINIT1 = 0x%08X\n", data);
                 break;
+            case 0x1D500020:
+                std::printf("[Memory  ] Unhandled write32 @ EDRAMREFRESH1 = 0x%08X\n", data);
+                break;
             case 0x1D500040:
                 std::printf("[Memory  ] Unhandled write32 @ EDRAMINIT2 = 0x%08X\n", data);
+                break;
+            case 0x1D500090:
+                std::printf("[Memory  ] Unhandled write32 @ EDRAMUNK2 = 0x%08X\n", data);
                 break;
             default:
                 std::printf("Unhandled write32 @ 0x%08X = 0x%08X\n", addr, data);
