@@ -10,6 +10,7 @@
 #include "memory.hpp"
 #include "nand.hpp"
 #include "scheduler.hpp"
+#include "syscon.hpp"
 #include "systime.hpp"
 #include "allegrex/allegrex.hpp"
 #include "allegrex/interpreter.hpp"
@@ -28,6 +29,7 @@ void init(const char *bootPath, const char *nandPath) {
     cpu.init(Type::Allegrex);
 
     kirk::init();
+    syscon::init();
     systime::init();
 
     std::puts("[PSP     ] OK");
