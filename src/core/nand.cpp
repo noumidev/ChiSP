@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstdio>
 
+#include "intc.hpp"
 #include "scheduler.hpp"
 #include "../common/file.hpp"
 
@@ -164,6 +165,8 @@ void finishTransfer() {
     dmaintr |= 3;                  // ??? Maybe? This seems to work
 
     deviceStatus |= (u32)NANDStatus::DEVICE_READY;
+
+    intc::sendIRQ(intc::InterruptSource::NAND);
 }
 
 // Loads a NAND image
