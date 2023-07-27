@@ -148,15 +148,15 @@ void COP0::setEXL(bool exl) {
     status |= (u32)exl << 1;
 }
 
-// NOTE: yes, IC is just ERL
+// IC is Status.IE
 bool COP0::getIC() {
-    return status & Status::ERL;
+    return status & Status::IE;
 }
 
-// NOTE: yes, IC is just ERL
+// IC is Status.IE
 void COP0::setIC(bool ic) {
-    status &= ~Status::ERL;
-    status |= (u32)ic << 2;
+    status &= ~Status::IE;
+    status |= (u32)ic;
 }
 
 void COP0::setEXCODE(Exception excode) {
@@ -170,7 +170,7 @@ void COP0::setBD(bool bd) {
 }
 
 bool COP0::isInterruptPending() {
-    return (status & Status::IE) && !getIC() && !(status & Status::EXL) && ((status & Status::IM) & (cause & Cause::IP));
+    return (status & Status::IE) && !(status & Status::EXL) && !(status & Status::ERL) && ((status & Status::IM) & (cause & Cause::IP));
 }
 
 void COP0::setIRQPending(bool irqPending) {
