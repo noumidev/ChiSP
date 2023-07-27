@@ -20,6 +20,8 @@ constexpr i64 SYSCON_OP_CYCLES = 1024;
 constexpr u32 BARYON_VERSION  = 0x00110001;
 constexpr u32 TACHYON_VERSION = 0x40000001;
 
+constexpr u32 FUSECONFIG = 0x00002C00;
+
 enum class SysConReg {
     NMIEN = 0x1C100000,
     NMIFLAG = 0x1C100004,
@@ -330,7 +332,7 @@ u32 read(u32 addr) {
         case SysConReg::FUSECONFIG:
             std::puts("[SysCon  ] Read @ FUSECONFIG");
 
-            return 0;
+            return FUSECONFIG;
         case SysConReg::UNKNOWN0:
             std::printf("[SysCon  ] Unknown read @ 0x%08X\n", addr);
 
