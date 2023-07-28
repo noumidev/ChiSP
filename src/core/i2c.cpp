@@ -8,11 +8,12 @@
 #include <cassert>
 #include <cstdio>
 
+#include "intc.hpp"
+#include "scheduler.hpp"
+
 namespace psp::i2c {
 
-u32 command, length, irqstatus;
-
-u32 unknown[5];
+constexpr i64 I2C_OP_CYCLES = 1024;
 
 enum class I2CReg {
     UNKNOWN0 = 0x1E200000,
@@ -25,6 +26,22 @@ enum class I2CReg {
     IRQSTATUS = 0x1E200028,
     UNKNOWN4 = 0x1E20002C,
 };
+
+u32 command, length, irqstatus;
+
+u32 unknown[5];
+
+u64 idFinishTransfer;
+
+void finishTransfer() {
+    irqstatus |= 1;
+
+    intc::sendIRQ(intc::InterruptSource::I2C);
+}
+
+void init() {
+    idFinishTransfer = scheduler::registerEvent([](int) {finishTransfer();});
+}
 
 u32 read(u32 addr) {
     switch ((I2CReg)addr) {
@@ -74,7 +91,7 @@ void write(u32 addr, u32 data) {
 
             command = data;
 
-            irqstatus |= 1;
+            scheduler::addEvent(idFinishTransfer, 0, I2C_OP_CYCLES);
             break;
         case I2CReg::LENGTH:
             std::printf("[I2C     ] Write @ LENGTH = 0x%08X\n", data);
