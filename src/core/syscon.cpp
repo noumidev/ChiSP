@@ -25,6 +25,7 @@ constexpr u32 FUSECONFIG = 0x00002C00;
 enum class SysConReg {
     NMIEN = 0x1C100000,
     NMIFLAG = 0x1C100004,
+    UNKNOWN0 = 0x1C10003C,
     RAMSIZE = 0x1C100040,
     RESETEN = 0x1C10004C,
     BUSCLKEN  = 0x1C100050,
@@ -35,7 +36,7 @@ enum class SysConReg {
     IOEN = 0x1C100078,
     GPIOEN = 0x1C10007C,
     FUSECONFIG = 0x1C100098,
-    UNKNOWN0 = 0x1C1000FC,
+    UNKNOWN1 = 0x1C1000FC,
 };
 
 enum class SysConSerialReg {
@@ -80,6 +81,8 @@ std::queue<u8> txQueue, rxQueue;
 
 // SysCon internal registers
 u32 powerStatus = 0;
+
+u32 unknown[2];
 
 u64 idFinishCommand;
 
@@ -294,6 +297,10 @@ void init() {
 
 u32 read(u32 addr) {
     switch ((SysConReg)addr) {
+        case SysConReg::UNKNOWN0:
+            std::printf("[SysCon  ] Unknown read @ 0x%08X\n", addr);
+
+            return unknown[0];
         case SysConReg::NMIEN:
             std::puts("[SysCon  ] Read @ NMIEN");
 
@@ -338,10 +345,10 @@ u32 read(u32 addr) {
             std::puts("[SysCon  ] Read @ FUSECONFIG");
 
             return FUSECONFIG;
-        case SysConReg::UNKNOWN0:
+        case SysConReg::UNKNOWN1:
             std::printf("[SysCon  ] Unknown read @ 0x%08X\n", addr);
 
-            return 0;
+            return unknown[1];
         default:
             std::printf("[SysCon  ] Unhandled read @ 0x%08X\n", addr);
 
@@ -376,6 +383,11 @@ void write(u32 addr, u32 data) {
             std::printf("[SysCon  ] Write @ NMIFLAG = 0x%08X\n", data);
 
             nmiflag &= ~data;
+            break;
+        case SysConReg::UNKNOWN0:
+            std::printf("[SysCon  ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            unknown[0] = data;
             break;
         case SysConReg::RAMSIZE:
             std::printf("[SysCon  ] Write @ RAMSIZE = 0x%08X\n", data);
@@ -417,8 +429,10 @@ void write(u32 addr, u32 data) {
 
             gpioen = data;
             break;
-        case SysConReg::UNKNOWN0:
+        case SysConReg::UNKNOWN1:
             std::printf("[SysCon  ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            unknown[1] = data;
             break;
         default:
             std::printf("[SysCon  ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
