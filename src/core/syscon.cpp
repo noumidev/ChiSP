@@ -58,8 +58,11 @@ enum class SysConCommand {
     READ_SCRATCHPAD  = 0x24,
     SEND_SETPARAM = 0x25,
     CTRL_TACHYON_WDT = 0x31,
+    CTRL_ANALOG_XY_POLLING = 0x33,
+    CTRL_HR_POWER = 0x34,
     CTRL_VOLTAGE  = 0x42,
     GET_POWER_STATUS = 0x46,
+    CTRL_LED = 0x47,
 };
 
 // NMI registers
@@ -177,8 +180,17 @@ void commonWrite(SysConCommand cmd) {
         case SysConCommand::CTRL_TACHYON_WDT:
             std::puts("[SysCon  ] Ctrl Tachyon WDT");
             break;
+        case SysConCommand::CTRL_ANALOG_XY_POLLING:
+            std::puts("[SysCon  ] Ctrl Analog XY Polling");
+            break;
+        case SysConCommand::CTRL_HR_POWER:
+            std::puts("[SysCon  ] Ctrl HR Power");
+            break;
         case SysConCommand::CTRL_VOLTAGE:
             std::puts("[SysCon  ] Ctrl Voltage");
+            break;
+        case SysConCommand::CTRL_LED:
+            std::puts("[SysCon  ] Ctrl LED");
             break;
         default:
             std::printf("Unhandled SysCon common write 0x%02X\n", (u8)cmd);
@@ -268,11 +280,20 @@ void doCommand() {
         case SysConCommand::CTRL_TACHYON_WDT:
             commonWrite(SysConCommand::CTRL_TACHYON_WDT);
             break;
+        case SysConCommand::CTRL_ANALOG_XY_POLLING:
+            commonWrite(SysConCommand::CTRL_ANALOG_XY_POLLING);
+            break;
+        case SysConCommand::CTRL_HR_POWER:
+            commonWrite(SysConCommand::CTRL_HR_POWER);
+            break;
         case SysConCommand::CTRL_VOLTAGE:
             commonWrite(SysConCommand::CTRL_VOLTAGE);
             break;
         case SysConCommand::GET_POWER_STATUS:
             commonRead(SysConCommand::GET_POWER_STATUS);
+            break;
+        case SysConCommand::CTRL_LED:
+            commonWrite(SysConCommand::CTRL_LED);
             break;
         default:
             std::printf("Unhandled SysCon command 0x%02X, length: %u\n", cmd, len);
