@@ -43,7 +43,7 @@ enum class NANDCommand {
     BLOCK_ERASE = 0x60,
     READ_STATUS = 0x70,
     READ_ID = 0x90,
-    BLOCK_ERASE2 = 0xD0,
+    ERASE_CONFIRM = 0xD0,
     RESET = 0xFF,
 };
 
@@ -82,7 +82,7 @@ u32 deviceStatus = (u32)NANDStatus::WRITE_PROTECT | (u32)NANDStatus::DEVICE_READ
 
 NANDState state = NANDState::IDLE;
 
-u64 idFinishTransfer;
+u64 idFinishTransfer, idFinishErase;
 
 void setSerialSize(u32 size) {
     serialSize = size;
@@ -96,6 +96,61 @@ u32 getSerialData() {
     serialIdx = (serialIdx + 4) % serialSize;
 
     return data;
+}
+
+void sendIRQ(int type) {
+    dmaintr |= type;
+
+    if ((dmaintr >> 8) & type) {
+        intc::sendIRQ(intc::InterruptSource::NAND);
+    }
+}
+
+void doDMA(bool toNAND, bool isPageEnabled, bool isSpareEnabled) {
+    assert(!toNAND && isPageEnabled && isSpareEnabled);
+
+    std::printf("[NAND    ] DMA transfer from NAND page 0x%X\n", dmapage);
+
+    std::memcpy(nandBuffer.data(), &nand[PAGE_SIZE_ECC * dmapage], PAGE_SIZE_ECC);
+
+    std::puts("NAND buffer is:");
+    for (u64 i = 0; i < PAGE_SIZE_ECC; i += 16) {
+        std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&nandBuffer[i], *(u32 *)&nandBuffer[i + 4], *(u32 *)&nandBuffer[i + 8], *(u32 *)&nandBuffer[i + 12]);
+    }
+}
+
+void finishTransfer() {
+    doDMA(dmactrl & DMACTRL::TO_NAND, dmactrl & DMACTRL::PAGE_DATA_EN, dmactrl & DMACTRL::SPARE_DATA_EN);
+
+    dmactrl &= ~DMACTRL::DMA_BUSY; // Clear DMA busy bit
+    deviceStatus |= (u32)NANDStatus::DEVICE_READY;
+
+    sendIRQ(2);
+}
+
+void finishErase() {
+    std::printf("[NAND    ] Erasing block 0x%X\n", nandpage);
+
+    assert(!(nandpage & 0x1F));
+            
+    std::memset(&nand[PAGE_SIZE_ECC * nandpage], 0xFF, BLOCK_SIZE);
+
+    deviceStatus |= (u32)NANDStatus::DEVICE_READY;
+    deviceStatus &= ~(u32)NANDStatus::ERASE_ERROR;
+
+    sendIRQ(1);
+}
+
+void startTransfer() {
+    deviceStatus &= ~(u32)NANDStatus::DEVICE_READY;
+
+    scheduler::addEvent(idFinishTransfer, 0, NAND_OP_CYCLES);
+}
+
+void startErase() {
+    deviceStatus &= ~(u32)NANDStatus::DEVICE_READY;
+
+    scheduler::addEvent(idFinishErase, 0, NAND_OP_CYCLES);
 }
 
 void doCommand(u8 cmd) {
@@ -120,12 +175,8 @@ void doCommand(u8 cmd) {
             serialData = (u8 *)&NAND_ID;
             setSerialSize(8);
             break;
-        case NANDCommand::BLOCK_ERASE2:
-            std::printf("[NAND    ] Erasing block 0x%X\n", nandpage);
-
-            assert(!(nandpage & 0x1F));
-
-            std::memset(&nand[PAGE_SIZE_ECC * nandpage], 0xFF, BLOCK_SIZE);
+        case NANDCommand::ERASE_CONFIRM:
+            startErase();
             break;
         case NANDCommand::RESET:
             std::puts("[NAND    ] Reset");
@@ -139,42 +190,13 @@ void doCommand(u8 cmd) {
     }
 }
 
-void doDMA(bool toNAND, bool isPageEnabled, bool isSpareEnabled) {
-    assert(!toNAND && isPageEnabled && isSpareEnabled);
-
-    std::printf("[NAND    ] DMA transfer from NAND page 0x%X\n", dmapage);
-
-    std::memcpy(nandBuffer.data(), &nand[PAGE_SIZE_ECC * dmapage], PAGE_SIZE_ECC);
-
-    std::puts("NAND buffer is:");
-    for (u64 i = 0; i < PAGE_SIZE_ECC; i += 16) {
-        std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&nandBuffer[i], *(u32 *)&nandBuffer[i + 4], *(u32 *)&nandBuffer[i + 8], *(u32 *)&nandBuffer[i + 12]);
-    }
-}
-
-void startTransfer() {
-    deviceStatus &= ~(u32)NANDStatus::DEVICE_READY;
-
-    scheduler::addEvent(idFinishTransfer, 0, NAND_OP_CYCLES);
-}
-
-void finishTransfer() {
-    doDMA(dmactrl & DMACTRL::TO_NAND, dmactrl & DMACTRL::PAGE_DATA_EN, dmactrl & DMACTRL::SPARE_DATA_EN);
-
-    dmactrl &= ~DMACTRL::DMA_BUSY; // Clear DMA busy bit
-    dmaintr |= 3;                  // ??? Maybe? This seems to work
-
-    deviceStatus |= (u32)NANDStatus::DEVICE_READY;
-
-    intc::sendIRQ(intc::InterruptSource::NAND);
-}
-
 // Loads a NAND image
 void init(const char *nandPath) {
     std::printf("[NAND    ] Loading NAND image \"%s\"\n", nandPath);
     assert(loadFile(nandPath, nand.data(), NAND_SIZE));
 
     idFinishTransfer = scheduler::registerEvent([](int) {finishTransfer();});
+    idFinishErase = scheduler::registerEvent([](int) {finishErase();});
 
     std::puts("[NAND    ] OK");
 }
