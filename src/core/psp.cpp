@@ -8,6 +8,7 @@
 #include <cstdio>
 
 #include "display.hpp"
+#include "hpremote.hpp"
 #include "i2c.hpp"
 #include "memory.hpp"
 #include "nand.hpp"
@@ -31,6 +32,7 @@ void init(const char *bootPath, const char *nandPath) {
     cpu.init(Type::Allegrex);
 
     display::init();
+    hpremote::init();
     i2c::init();
     kirk::init();
     syscon::init();

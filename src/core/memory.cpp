@@ -13,6 +13,7 @@
 #include "ddr.hpp"
 #include "display.hpp"
 #include "gpio.hpp"
+#include "hpremote.hpp"
 #include "intc.hpp"
 #include "i2c.hpp"
 #include "nand.hpp"
@@ -179,6 +180,8 @@ u32 read32(u32 addr) {
         //std::printf("[UART0   ] Unhandled read @ 0x%08X\n", addr);
 
         return 0;
+    } else if (inRange(addr, (u64)MemoryBase::HPRemote, (u64)MemorySize::UART)) {
+        return hpremote::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
         return syscon::readSerial(addr);
     } else if (inRange(addr, (u64)MemoryBase::Display, (u64)MemorySize::Display)) {
@@ -191,9 +194,15 @@ u32 read32(u32 addr) {
         return nand::readBuffer32(addr);
     } else {
         switch (addr) {
+            case 0x1D500000:
+                std::printf("[Memory  ] Unhandled read32 @ EDRAMREFRESH0\n");
+                return 0;
             case 0x1D500010:
                 std::printf("[Memory  ] Unhandled read32 @ EDRAMINIT1\n");
                 return 0; // Pre IPL hangs if bit 0 is high
+            case 0x1D500040:
+                std::printf("[Memory  ] Unhandled read32 @ EDRAMINIT2\n");
+                return 0;
             default:
                 std::printf("Unhandled read32 @ 0x%08X\n", addr);
 
@@ -295,6 +304,8 @@ void write32(u32 addr, u32 data) {
         } else {
             std::printf("[UART0   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
         }
+    } else if (inRange(addr, (u64)MemoryBase::HPRemote, (u64)MemorySize::UART)) {
+        return hpremote::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
         return syscon::writeSerial(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::Display, (u64)MemorySize::Display)) {
@@ -305,11 +316,17 @@ void write32(u32 addr, u32 data) {
         std::memcpy(&sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u32));
     } else {
         switch (addr) {
+            case 0x1D500000:
+                std::printf("[Memory  ] Unhandled write32 @ EDRAMREFRESH0 = 0x%08X\n", data);
+                break;
             case 0x1D500010:
                 std::printf("[Memory  ] Unhandled write32 @ EDRAMINIT1 = 0x%08X\n", data);
                 break;
             case 0x1D500020:
                 std::printf("[Memory  ] Unhandled write32 @ EDRAMREFRESH1 = 0x%08X\n", data);
+                break;
+            case 0x1D500030:
+                std::printf("[Memory  ] Unhandled write32 @ EDRAMREFRESH2 = 0x%08X\n", data);
                 break;
             case 0x1D500040:
                 std::printf("[Memory  ] Unhandled write32 @ EDRAMINIT2 = 0x%08X\n", data);

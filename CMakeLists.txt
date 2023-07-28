@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set compile options
-add_compile_options(-Wall -Wextra)
+add_compile_options(-O2 -Wall -Wextra)
 set(CMAKE_BUILD_TYPE Debug)
 
 add_subdirectory(cryptopp-cmake)
@@ -18,6 +18,7 @@ set(SOURCES
     src/core/ddr.cpp
     src/core/display.cpp
     src/core/gpio.cpp
+    src/core/hpremote.cpp
     src/core/intc.cpp
     src/core/i2c.cpp
     src/core/memory.cpp
@@ -39,6 +40,7 @@ set(HEADERS
     src/core/ddr.hpp
     src/core/display.hpp
     src/core/gpio.hpp
+    src/core/hpremote.hpp
     src/core/intc.hpp
     src/core/i2c.hpp
     src/core/memory.hpp

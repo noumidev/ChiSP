@@ -29,6 +29,7 @@ enum class MemoryBase {
     GPIO = 0x1E240000,
     POWERMAN = 0x1E300000,
     UART0 = 0x1E4C0000,
+    HPRemote = 0x1E500000,
     SysConSerial = 0x1E580000,
     Display = 0x1E740000,
     BootROM = 0x1FC00000,
