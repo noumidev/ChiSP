@@ -16,6 +16,7 @@ add_subdirectory(cryptopp-cmake)
 set(SOURCES
     src/main.cpp
     src/core/ddr.cpp
+    src/core/display.cpp
     src/core/gpio.cpp
     src/core/intc.cpp
     src/core/i2c.cpp
@@ -36,6 +37,7 @@ set(HEADERS
     src/common/file.hpp
     src/common/types.hpp
     src/core/ddr.hpp
+    src/core/display.hpp
     src/core/gpio.hpp
     src/core/intc.hpp
     src/core/i2c.hpp
