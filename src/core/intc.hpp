@@ -15,6 +15,7 @@ enum class InterruptSource {
     SysTime = 19,
     NAND = 20,
     KIRK = 24,
+    VSYNC = 30,
 };
 
 u32  read (u32 addr);
