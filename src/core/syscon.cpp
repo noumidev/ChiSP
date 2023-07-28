@@ -29,6 +29,7 @@ enum class SysConReg {
     RESETEN = 0x1C10004C,
     BUSCLKEN  = 0x1C100050,
     GPIOCLKEN = 0x1C100058,
+    CLKSEL2 = 0x1C100060,
     SPICLK  = 0x1C100064,
     PLLFREQ = 0x1C100068,
     IOEN = 0x1C100078,
@@ -313,6 +314,10 @@ u32 read(u32 addr) {
             std::puts("[SysCon  ] Read @ GPIOCLKEN");
 
             return gpioclken;
+        case SysConReg::CLKSEL2:
+            std::puts("[SysCon  ] Read @ CLKSEL2");
+
+            return 0;
         case SysConReg::SPICLK:
             std::puts("[SysCon  ] Read @ SPICLK");
 
@@ -393,6 +398,9 @@ void write(u32 addr, u32 data) {
             std::printf("[SysCon  ] Write @ GPIOCLKEN = 0x%08X\n", data);
 
             gpioclken = data;
+            break;
+        case SysConReg::CLKSEL2:
+            std::printf("[SysCon  ] Write @ CLKSEL2 = 0x%08X\n", data);
             break;
         case SysConReg::SPICLK:
             std::printf("[SysCon  ] Write @ SPICLK = 0x%08X\n", data);
