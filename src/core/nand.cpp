@@ -132,7 +132,7 @@ void finishErase() {
     std::printf("[NAND    ] Erasing block 0x%X\n", nandpage);
 
     assert(!(nandpage & 0x1F));
-            
+
     std::memset(&nand[PAGE_SIZE_ECC * nandpage], 0xFF, BLOCK_SIZE);
 
     deviceStatus |= (u32)NANDStatus::DEVICE_READY;
@@ -240,8 +240,10 @@ void write(u32 addr, u32 data) {
 
             control = data;
             break;
-        case NANDReg::STATUS: // ??
+        case NANDReg::STATUS:
             std::printf("[NAND    ] Write @ STATUS = 0x%08X\n", data);
+
+            deviceStatus = (data & (u32)NANDStatus::WRITE_PROTECT) | (deviceStatus & 0x41); // Software can write write-prot bit
             break;
         case NANDReg::COMMAND:
             std::printf("[NAND    ] Write @ COMMAND = 0x%08X\n", data);
