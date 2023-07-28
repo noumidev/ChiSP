@@ -68,7 +68,7 @@ void write(u32 addr, u32 data) {
 
                 std::printf("[INTC    ] Write @ FLAG%u = 0x%08X\n", idx, data);
 
-                flag[idx] = data;
+                flag[idx] &= ~data;
             }
             break;
         case INTCRegs::MASK0:
