@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "ddr.hpp"
+#include "display.hpp"
 #include "gpio.hpp"
 #include "intc.hpp"
 #include "i2c.hpp"
@@ -154,6 +155,14 @@ u32 read32(u32 addr) {
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::Audio, (u64)MemorySize::Audio)) {
+        std::printf("[Audio   ] Unhandled read @ 0x%08X\n", addr);
+
+        if (addr == 0x1E000028) {
+            return -1;
+        }
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::LCDC, (u64)MemorySize::LCDC)) {
         std::printf("[LCDC    ] Unhandled read @ 0x%08X\n", addr);
 
@@ -172,6 +181,8 @@ u32 read32(u32 addr) {
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
         return syscon::readSerial(addr);
+    } else if (inRange(addr, (u64)MemoryBase::Display, (u64)MemorySize::Display)) {
+        return display::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         std::memcpy(&data, &resetVector[addr & (resetSize - 1)], sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -268,6 +279,8 @@ void write32(u32 addr, u32 data) {
         std::printf("[GE      ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::Audio, (u64)MemorySize::Audio)) {
+        std::printf("[Audio   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::LCDC, (u64)MemorySize::LCDC)) {
         std::printf("[LCDC    ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::I2C, (u64)MemorySize::I2C)) {
@@ -284,6 +297,8 @@ void write32(u32 addr, u32 data) {
         }
     } else if (inRange(addr, (u64)MemoryBase::SysConSerial, (u64)MemorySize::SysConSerial)) {
         return syscon::writeSerial(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::Display, (u64)MemorySize::Display)) {
+        return display::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         std::memcpy(&resetVector[addr & (resetSize - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
