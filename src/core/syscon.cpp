@@ -170,7 +170,7 @@ void commonRead(SysConCommand cmd) {
         case SysConCommand::GET_POWER_SUPPLY_STATUS:
             std::puts("[SysCon  ] Get Power Supply Status");
 
-            data = 1 << 7; // Battery inserted?
+            data = 0xC2; // JPCSP returns this value
             break;
         case SysConCommand::GET_WAKE_UP_FACTOR:
             std::puts("[SysCon  ] Get Wake Up Factor");
