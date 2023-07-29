@@ -15,7 +15,7 @@
 
 namespace psp::syscon {
 
-constexpr i64 SYSCON_OP_CYCLES = 1024;
+constexpr i64 SYSCON_OP_CYCLES = 1 << 16;
 
 constexpr u32 BARYON_VERSION  = 0x00110001;
 constexpr u32 TACHYON_VERSION = 0x40000001;
