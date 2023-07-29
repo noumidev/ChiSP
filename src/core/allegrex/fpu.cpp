@@ -6,6 +6,7 @@
 #include "fpu.hpp"
 
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -14,7 +15,12 @@ namespace psp::allegrex::fpu {
 constexpr auto ENABLE_DISASM = true;
 
 enum class SingleOpcode {
+    ADD = 0x00,
+    SUB = 0x01,
     MUL = 0x02,
+    DIV = 0x03,
+    SQRT = 0x04,
+    MOV = 0x06,
 };
 
 const char *fpuName[] = {
@@ -68,6 +74,19 @@ void FPU::setF32(int idx, f32 data) {
     std::memcpy(&fgrs[idx], &data, sizeof(u32));
 }
 
+/* ADD */
+void FPU::iADD(u32 instr) {
+    const auto fd = getFd(instr);
+    const auto fs = getFs(instr);
+    const auto ft = getFt(instr);
+
+    setF32(fd, getF32(fs) + getF32(ft));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] ADD.S F%u, F%u, F%u; F%u = %f\n", fpuName[cpuID], fd, fs, ft, fd, getF32(fd));
+    }
+}
+
 // ConVert To Single
 void FPU::iCVTS(u32 instr) {
     const auto fd = getFd(instr);
@@ -77,6 +96,31 @@ void FPU::iCVTS(u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] CVT.S.W F%u, F%u; F%u = %f\n", fpuName[cpuID], fd, fs, fd, getF32(fd));
+    }
+}
+
+/* DIVide */
+void FPU::iDIV(u32 instr) {
+    const auto fd = getFd(instr);
+    const auto fs = getFs(instr);
+    const auto ft = getFt(instr);
+
+    setF32(fd, getF32(fs) / getF32(ft));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] DIV.S F%u, F%u, F%u; F%u = %f\n", fpuName[cpuID], fd, fs, ft, fd, getF32(fd));
+    }
+}
+
+/* MOVe */
+void FPU::iMOV(u32 instr) {
+    const auto fd = getFd(instr);
+    const auto fs = getFs(instr);
+
+    setF32(fd, getF32(fs));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] MOV.S F%u, F%u; F%u = %f\n", fpuName[cpuID], fd, fs, fd, getF32(fd));
     }
 }
 
@@ -93,12 +137,52 @@ void FPU::iMUL(u32 instr) {
     }
 }
 
+/* SQuare RooT */
+void FPU::iSQRT(u32 instr) {
+    const auto fd = getFd(instr);
+    const auto fs = getFs(instr);
+
+    setF32(fd, std::sqrt(getF32(fs)));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] SQRT.S F%u, F%u; F%u = %f\n", fpuName[cpuID], fd, fs, fd, getF32(fd));
+    }
+}
+
+/* SUBtract */
+void FPU::iSUB(u32 instr) {
+    const auto fd = getFd(instr);
+    const auto fs = getFs(instr);
+    const auto ft = getFt(instr);
+
+    setF32(fd, getF32(fs) - getF32(ft));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] SUB.S F%u, F%u, F%u; F%u = %f\n", fpuName[cpuID], fd, fs, ft, fd, getF32(fd));
+    }
+}
+
 void FPU::doSingle(u32 instr) {
     const auto opcode = instr & 0x3F;
 
     switch ((SingleOpcode)opcode) {
+        case SingleOpcode::ADD:
+            iADD(instr);
+            break;
+        case SingleOpcode::SUB:
+            iSUB(instr);
+            break;
         case SingleOpcode::MUL:
             iMUL(instr);
+            break;
+        case SingleOpcode::DIV:
+            iDIV(instr);
+            break;
+        case SingleOpcode::SQRT:
+            iSQRT(instr);
+            break;
+        case SingleOpcode::MOV:
+            iMOV(instr);
             break;
         default:
             std::printf("Unhandled %s Single instruction 0x%02X (0x%08X)\n", fpuName[cpuID], opcode, instr);

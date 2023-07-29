@@ -34,7 +34,12 @@ private:
 
     // FPU instructions
     // Single
+    void iADD(u32 instr);
+    void iDIV(u32 instr);
+    void iMOV(u32 instr);
     void iMUL(u32 instr);
+    void iSQRT(u32 instr);
+    void iSUB(u32 instr);
 
     // Word
     void iCVTS(u32 instr);
