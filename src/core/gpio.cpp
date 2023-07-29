@@ -30,7 +30,7 @@ enum class GPIOReg {
 };
 
 // GPIO pin enable
-u32 outen, inen;
+u32 outen, inen, pins;
 
 // GPIO interrupts
 u32 irqen, irqstatus;
@@ -42,6 +42,54 @@ u32 capten, timercapten;
 
 u32 unknown;
 
+void set(GPIOPin pin) {
+    // TODO: check INEN??
+    if (!(pins & pin)) { // Not already set?
+        pins |= pin;
+
+        if (risingedge & pin) {
+            irqstatus |= pin;
+
+            if (irqen & irqstatus) {
+                intc::sendIRQ(intc::InterruptSource::GPIO);
+            }
+        }
+    }
+}
+
+void setAll(u32 data) {
+    // TODO: check OUTEN?
+    for (int i = 0; i < 32; i++) {
+        if (data & (1 << i)) {
+            set((GPIOPin)(1 << i));
+        }
+    }
+}
+
+void clear(GPIOPin pin) {
+    // TODO: check INEN?
+    if (pins & pin) { // Already set?
+        pins &= ~pin;
+
+        if (fallingedge & pin) {
+            irqstatus |= pin;
+
+            if (irqen & irqstatus) {
+                intc::sendIRQ(intc::InterruptSource::GPIO);
+            }
+        }
+    }
+}
+
+void clearAll(u32 data) {
+    // TODO: check OUTEN?
+    for (int i = 0; i < 32; i++) {
+        if (data & (1 << i)) {
+            clear((GPIOPin)(1 << i));
+        }
+    }
+}
+
 u32 read(u32 addr) {
     switch ((GPIOReg)addr) {
         case GPIOReg::OUTEN:
@@ -51,13 +99,13 @@ u32 read(u32 addr) {
         case GPIOReg::READ:
             std::puts("[GPIO    ] Read @ READ");
 
-            return 0;
+            return pins;
         case GPIOReg::IRQEN:
             std::puts("[GPIO    ] Read @ IRQEN");
 
             return irqen;
         case GPIOReg::IRQSTATUS:
-            std::puts("[GPIO    ] Read @ IRQSTATUS");
+            //std::puts("[GPIO    ] Read @ IRQSTATUS");
 
             return irqstatus;
         case GPIOReg::INEN:
@@ -84,9 +132,13 @@ void write(u32 addr, u32 data) {
             break;
         case GPIOReg::SET:
             std::printf("[GPIO    ] Write @ SET = 0x%08X\n", data);
+
+            setAll(data);
             break;
         case GPIOReg::CLEAR:
             std::printf("[GPIO    ] Write @ CLEAR = 0x%08X\n", data);
+            
+            clearAll(data);
             break;
         case GPIOReg::EDGEDETECT:
             std::printf("[GPIO    ] Write @ EDGEDETECT = 0x%08X\n", data);
@@ -137,14 +189,6 @@ void write(u32 addr, u32 data) {
             std::printf("[GPIO    ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
 
             exit(0);
-    }
-}
-
-void sendIRQ(GPIOInterrupt irq) {
-    irqstatus |= (u32)irq;
-
-    if (irqstatus & irqen) {
-        intc::sendIRQ(intc::InterruptSource::GPIO);
     }
 }
 

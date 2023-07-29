@@ -22,10 +22,10 @@ constexpr u32 TACHYON_VERSION = 0x40000001;
 
 constexpr u32 FUSECONFIG = 0x00002C00;
 
-constexpr u8  BATTERY_TEMP = 20;       // 20C?
-constexpr u16 BATTERY_VOLT = 3800;     // 3800mV
-constexpr u16 BATTERY_ELEC = 3800;     // ??
-constexpr u16 BATTERY_FULL_CAP = 1800; // 1800mAh
+constexpr u32 BATTERY_TEMP = 20;       // 20C?
+constexpr u32 BATTERY_VOLT = 3800;     // 3800mV
+constexpr u32 BATTERY_ELEC = 3800;     // ??
+constexpr u32 BATTERY_FULL_CAP = 1800; // 1800mAh
 
 enum class SysConReg {
     NMIEN = 0x1C100000,
@@ -263,10 +263,12 @@ void batteryCommon(SysConCommand cmd, int len, const u8 *data) {
 void cmdBatteryGetStatusCap() {
     std::printf("[SysCon  ] Battery Get Status Cap\n");
 
-    writeResponse(2);
+    writeResponse(4);
 
     rxQueue.push(((u8 *)&BATTERY_FULL_CAP)[0]);
     rxQueue.push(((u8 *)&BATTERY_FULL_CAP)[1]);
+    rxQueue.push(((u8 *)&BATTERY_FULL_CAP)[2]);
+    rxQueue.push(((u8 *)&BATTERY_FULL_CAP)[3]);
 }
 
 void cmdGetTimestamp() {
@@ -381,16 +383,16 @@ void doCommand() {
             cmdBatteryGetStatusCap();
             break;
         case SysConCommand::BATTERY_GET_TEMP:
-            batteryCommon(SysConCommand::BATTERY_GET_TEMP, 1, &BATTERY_TEMP);
+            batteryCommon(SysConCommand::BATTERY_GET_TEMP, 4, (u8 *)&BATTERY_TEMP);
             break;
         case SysConCommand::BATTERY_GET_VOLT:
-            batteryCommon(SysConCommand::BATTERY_GET_VOLT, 2, (u8 *)&BATTERY_VOLT);
+            batteryCommon(SysConCommand::BATTERY_GET_VOLT, 4, (u8 *)&BATTERY_VOLT);
             break;
         case SysConCommand::BATTERY_GET_ELEC:
-            batteryCommon(SysConCommand::BATTERY_GET_ELEC, 2, (u8 *)&BATTERY_ELEC);
+            batteryCommon(SysConCommand::BATTERY_GET_ELEC, 4, (u8 *)&BATTERY_ELEC);
             break;
         case SysConCommand::BATTERY_GET_FULL_CAP:
-            batteryCommon(SysConCommand::BATTERY_GET_FULL_CAP, 2, (u8 *)&BATTERY_FULL_CAP);
+            batteryCommon(SysConCommand::BATTERY_GET_FULL_CAP, 4, (u8 *)&BATTERY_FULL_CAP);
             break;
         default:
             std::printf("Unhandled SysCon command 0x%02X, length: %u\n", cmd, len);
@@ -402,7 +404,8 @@ void doCommand() {
 
     serialflags |= 5;
 
-    gpio::sendIRQ(gpio::GPIOInterrupt::SysCon);
+    gpio::set(gpio::GPIOPin::SYSCON_END);
+    gpio::clear(gpio::GPIOPin::SYSCON_START);
 }
 
 void finishCommand() {
@@ -572,6 +575,8 @@ void writeSerial(u32 addr, u32 data) {
                     clearTxQueue();
                     break;
                 case 6:
+                    gpio::clear(gpio::GPIOPin::SYSCON_END);
+
                     scheduler::addEvent(idFinishCommand, 0, SYSCON_OP_CYCLES);
                     break;
                 default:
