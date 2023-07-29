@@ -22,6 +22,11 @@ constexpr u32 TACHYON_VERSION = 0x40000001;
 
 constexpr u32 FUSECONFIG = 0x00002C00;
 
+constexpr u8 BATTERY_TEMP[] = {20};             // 20C?
+constexpr u8 BATTERY_VOLT[] = {0x0E, 0xD8};     // 3800mV
+constexpr u8 BATTERY_ELEC[] = {0x00, 0x00};     // ??
+constexpr u8 BATTERY_FULL_CAP[] = {0x07, 0x08}; // 1800mAh
+
 enum class SysConReg {
     NMIEN = 0x1C100000,
     NMIFLAG = 0x1C100004,
@@ -52,7 +57,9 @@ enum class SysConSerialReg {
 
 enum class SysConCommand {
     GET_BARYON_VERSION = 0x01,
+    GET_TACHYON_TEMP = 0x05,
     GET_KERNEL_DIGITAL_KEY = 0x07,
+    GET_POWER_SUPPLY_STATUS = 0x0B,
     GET_WAKE_UP_FACTOR = 0x0E,
     GET_TIMESTAMP = 0x11,
     READ_SCRATCHPAD  = 0x24,
@@ -63,6 +70,11 @@ enum class SysConCommand {
     CTRL_VOLTAGE  = 0x42,
     GET_POWER_STATUS = 0x46,
     CTRL_LED = 0x47,
+    BATTERY_GET_STATUS_CAP = 0x61,
+    BATTERY_GET_TEMP = 0x62,
+    BATTERY_GET_VOLT = 0x63,
+    BATTERY_GET_ELEC = 0x64,
+    BATTERY_GET_FULL_CAP = 0x67,
 };
 
 // NMI registers
@@ -145,10 +157,20 @@ void commonRead(SysConCommand cmd) {
 
             data = BARYON_VERSION;
             break;
+        case SysConCommand::GET_TACHYON_TEMP:
+            std::puts("[SysCon  ] Get Tachyon Temp");
+
+            data = 13094; // Kernel expects this command to return this value for some reason.
+            break;
         case SysConCommand::GET_KERNEL_DIGITAL_KEY:
             std::puts("[SysCon  ] Get Kernel Digital Key");
 
             data = 0; // ??
+            break;
+        case SysConCommand::GET_POWER_SUPPLY_STATUS:
+            std::puts("[SysCon  ] Get Power Supply Status");
+
+            data = 1 << 7; // Battery inserted?
             break;
         case SysConCommand::GET_WAKE_UP_FACTOR:
             std::puts("[SysCon  ] Get Wake Up Factor");
@@ -197,6 +219,42 @@ void commonWrite(SysConCommand cmd) {
 
             exit(0);
     }
+}
+
+void batteryCommon(SysConCommand cmd, int len, const u8 *data) {
+    writeResponse(len);
+
+    switch (cmd) {
+        case SysConCommand::BATTERY_GET_TEMP:
+            std::puts("[SysCon  ] Battery Get Temp");
+            break;
+        case SysConCommand::BATTERY_GET_VOLT:
+            std::puts("[SysCon  ] Battery Get Volt");
+            break;
+        case SysConCommand::BATTERY_GET_ELEC:
+            std::puts("[SysCon  ] Battery Get Elec");
+            break;
+        case SysConCommand::BATTERY_GET_FULL_CAP:
+            std::puts("[SysCon  ] Battery Get Full Cap");
+            break;
+        default:
+            std::printf("Unhandled SysCon battery command 0x%02X\n", (u8)cmd);
+
+            exit(0);
+    }
+
+    for (int i = 0; i < len; i++) {
+        rxQueue.push(data[i]);
+    }
+}
+
+void cmdBatteryGetStatusCap() {
+    std::printf("[SysCon  ] Battery Get Status Cap\n");
+
+    writeResponse(2);
+
+    rxQueue.push(BATTERY_FULL_CAP[0]);
+    rxQueue.push(BATTERY_FULL_CAP[1]);
 }
 
 void cmdGetTimestamp() {
@@ -262,8 +320,14 @@ void doCommand() {
         case SysConCommand::GET_BARYON_VERSION:
             commonRead(SysConCommand::GET_BARYON_VERSION);
             break;
+        case SysConCommand::GET_TACHYON_TEMP:
+            commonRead(SysConCommand::GET_TACHYON_TEMP);
+            break;
         case SysConCommand::GET_KERNEL_DIGITAL_KEY:
             commonRead(SysConCommand::GET_KERNEL_DIGITAL_KEY);
+            break;
+        case SysConCommand::GET_POWER_SUPPLY_STATUS:
+            commonRead(SysConCommand::GET_POWER_SUPPLY_STATUS);
             break;
         case SysConCommand::GET_WAKE_UP_FACTOR:
             commonRead(SysConCommand::GET_WAKE_UP_FACTOR);
@@ -294,6 +358,21 @@ void doCommand() {
             break;
         case SysConCommand::CTRL_LED:
             commonWrite(SysConCommand::CTRL_LED);
+            break;
+        case SysConCommand::BATTERY_GET_STATUS_CAP:
+            cmdBatteryGetStatusCap();
+            break;
+        case SysConCommand::BATTERY_GET_TEMP:
+            batteryCommon(SysConCommand::BATTERY_GET_TEMP, 1, BATTERY_TEMP);
+            break;
+        case SysConCommand::BATTERY_GET_VOLT:
+            batteryCommon(SysConCommand::BATTERY_GET_VOLT, 2, BATTERY_VOLT);
+            break;
+        case SysConCommand::BATTERY_GET_ELEC:
+            batteryCommon(SysConCommand::BATTERY_GET_ELEC, 2, BATTERY_ELEC);
+            break;
+        case SysConCommand::BATTERY_GET_FULL_CAP:
+            batteryCommon(SysConCommand::BATTERY_GET_FULL_CAP, 2, BATTERY_FULL_CAP);
             break;
         default:
             std::printf("Unhandled SysCon command 0x%02X, length: %u\n", cmd, len);
