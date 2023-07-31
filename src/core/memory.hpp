@@ -10,6 +10,7 @@
 namespace psp::memory {
 
 enum class MemoryBase {
+    MESPRAM = 0x00000000,
     SPRAM = 0x00010000,
     EDRAM = 0x04000000,
     DRAM  = 0x08000000,
@@ -19,6 +20,7 @@ enum class MemoryBase {
     Timer = 0x1C500000,
     SysTime = 0x1C600000,
     DMACplus = 0x1C800000,
+    VME = 0x1CC00000,
     DDR = 0x1D000000,
     NAND = 0x1D101000,
     GE  = 0x1D400000,
@@ -48,6 +50,7 @@ enum class MemorySize {
     Timer = 0x404,
     SysTime = 0x14,
     DMACplus = 0x1E0,
+    VME = 0x74,
     DDR = 0x48,
     NAND  = 0x304,
     GE  = 0xE80,

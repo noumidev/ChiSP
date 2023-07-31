@@ -24,10 +24,13 @@
 
 namespace psp::memory {
 
+constexpr auto CPUID_CPU = 0;
+constexpr auto CPUID_ME  = 1;
+
 // PSP system memory
 std::array<u8, (u64)MemorySize::BootROM> bootROM;
 std::array<u8, (u64)MemorySize::SPRAM> spram;
-std::array<u8, (u64)MemorySize::EDRAM> edram, sharedRAM;
+std::array<u8, (u64)MemorySize::EDRAM> edram, sharedRAM, meSPRAM;
 std::array<u8, (u64)MemorySize::DRAM>  dram;
 
 u8 *resetVector = bootROM.data();
@@ -133,9 +136,9 @@ u32 read32(u32 addr) {
 
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
-        return syscon::read(addr);
+        return syscon::read(CPUID_CPU, addr);
     } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
-        return intc::read(addr);
+        return intc::read(CPUID_CPU, addr);
     } else if (inRange(addr, (u64)MemoryBase::Timer, (u64)MemorySize::Timer)) {
         std::printf("[Timer   ] Unhandled read @ 0x%08X\n", addr);
 
@@ -271,9 +274,9 @@ void write32(u32 addr, u32 data) {
     } else if (inRange(addr, (u64)MemoryBase::MEMPROT, (u64)MemorySize::MEMPROT)) {
         std::printf("[MEMPROT ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
-        return syscon::write(addr, data);
+        return syscon::write(CPUID_CPU, addr, data);
     } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
-        return intc::write(addr, data);
+        return intc::write(CPUID_CPU, addr, data);
     } else if (inRange(addr, (u64)MemoryBase::Timer, (u64)MemorySize::Timer)) {
         std::printf("[Timer   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
@@ -345,7 +348,11 @@ void write32(u32 addr, u32 data) {
 u8 meRead8(u32 addr) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+    if (inRange(addr, (u64)MemoryBase::MESPRAM, (u64)MemorySize::EDRAM)) {
+        return meSPRAM[addr & ((u32)MemorySize::EDRAM - 1)];
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        return dram[addr & ((u32)MemorySize::DRAM - 1)];
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
         return sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)];
     } else {
         switch (addr) {
@@ -362,7 +369,11 @@ u16 meRead16(u32 addr) {
 
     u16 data;
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+    if (inRange(addr, (u64)MemoryBase::MESPRAM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&data, &meSPRAM[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&data, &dram[addr & ((u32)MemorySize::DRAM - 1)], sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&data, &sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u16));
     } else {
         switch (addr) {
@@ -381,7 +392,23 @@ u32 meRead32(u32 addr) {
 
     u32 data;
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+    if (inRange(addr, (u64)MemoryBase::MESPRAM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&data, &meSPRAM[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&data, &dram[addr & ((u32)MemorySize::DRAM - 1)], sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::MEMPROT, (u64)MemorySize::MEMPROT)) {
+        std::printf("[MEMPROT ] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
+    } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
+        return syscon::read(CPUID_ME, addr);
+    } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
+        return intc::read(CPUID_ME, addr);
+    } else if (inRange(addr, (u64)MemoryBase::VME, (u64)MemorySize::VME)) {
+        std::printf("[VME     ] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&data, &sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u32));
     } else {
         switch (addr) {
@@ -398,7 +425,11 @@ u32 meRead32(u32 addr) {
 void meWrite8(u32 addr, u8 data) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+    if (inRange(addr, (u64)MemoryBase::MESPRAM, (u64)MemorySize::EDRAM)) {
+        meSPRAM[addr & ((u32)MemorySize::EDRAM - 1)] = data;
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        dram[addr & ((u32)MemorySize::DRAM - 1)] = data;
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
         sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)] = data;
     } else {
         switch (addr) {
@@ -413,7 +444,11 @@ void meWrite8(u32 addr, u8 data) {
 void meWrite16(u32 addr, u16 data) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+    if (inRange(addr, (u64)MemoryBase::MESPRAM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&meSPRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&dram[addr & ((u32)MemorySize::DRAM - 1)], &data, sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u16));
     } else {
         switch (addr) {
@@ -428,8 +463,18 @@ void meWrite16(u32 addr, u16 data) {
 void meWrite32(u32 addr, u32 data) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
-        return syscon::write(addr, data);
+    if (inRange(addr, (u64)MemoryBase::MESPRAM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&meSPRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&dram[addr & ((u32)MemorySize::DRAM - 1)], &data, sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::MEMPROT, (u64)MemorySize::MEMPROT)) {
+        std::printf("[MEMPROT ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
+        return syscon::write(CPUID_ME, addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::INTC, (u64)MemorySize::INTC)) {
+        return intc::write(CPUID_ME, addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::VME, (u64)MemorySize::VME)) {
+        std::printf("[VME     ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u32));
     } else {
