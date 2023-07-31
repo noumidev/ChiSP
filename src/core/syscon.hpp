@@ -11,10 +11,10 @@ namespace psp::syscon {
 
 void init();
 
-u32 read(u32 addr);
+u32 read(int cpuID, u32 addr);
 u32 readSerial(u32 addr);
 
-void write(u32 addr, u32 data);
+void write(int cpuID, u32 addr, u32 data);
 void writeSerial(u32 addr, u32 data);
 
 }

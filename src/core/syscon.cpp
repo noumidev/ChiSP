@@ -36,6 +36,7 @@ enum class SysConReg {
     RAMSIZE = 0x1C100040,
     RESETEN = 0x1C10004C,
     BUSCLKEN  = 0x1C100050,
+    CLKEN  = 0x1C100054,
     GPIOCLKEN = 0x1C100058,
     CLKSEL2 = 0x1C100060,
     SPICLK  = 0x1C100064,
@@ -82,16 +83,22 @@ enum class SysConCommand {
     BATTERY_GET_LIMIT_TIME = 0x69,
 };
 
-// NMI registers
-u32 nmien, nmiflag;
+struct SysConRegs {
+    // NMI registers
+    u32 nmien, nmiflag;
 
-// Clock registers
-u32 busclken, gpioclken;
+    // Clock registers
+    u32 busclken, gpioclken;
 
-// Enable
-u32 reseten, ioen, gpioen;
+    // Enable
+    u32 reseten, ioen, gpioen;
 
-u32 ramsize = TACHYON_VERSION, pllfreq = 333, spiclk;
+    u32 ramsize = TACHYON_VERSION, pllfreq = 333, spiclk;
+
+    u32 unknown[2];
+};
+
+SysConRegs regs[2];
 
 // Serial registers
 u32 serialflags;
@@ -101,8 +108,6 @@ std::queue<u8> txQueue, rxQueue;
 
 // SysCon internal registers
 u32 powerStatus = 0;
-
-u32 unknown[2];
 
 u64 idFinishCommand;
 
@@ -425,32 +430,38 @@ void init() {
     idFinishCommand = scheduler::registerEvent([](int) {finishCommand();});
 }
 
-u32 read(u32 addr) {
+u32 read(int cpuID, u32 addr) {
+    const auto &r = regs[cpuID];
+
     switch ((SysConReg)addr) {
         case SysConReg::UNKNOWN0:
             std::printf("[SysCon  ] Unknown read @ 0x%08X\n", addr);
 
-            return unknown[0];
+            return r.unknown[0];
         case SysConReg::NMIEN:
             std::puts("[SysCon  ] Read @ NMIEN");
 
-            return nmien;
+            return r.nmien;
         case SysConReg::RAMSIZE:
             std::puts("[SysCon  ] Read @ RAMSIZE");
 
-            return ramsize;
+            return r.ramsize;
         case SysConReg::RESETEN:
             std::puts("[SysCon  ] Read @ RESETEN");
 
-            return reseten;
+            return r.reseten;
         case SysConReg::BUSCLKEN:
             std::puts("[SysCon  ] Read @ BUSCLKEN");
 
-            return busclken;
+            return r.busclken;
+        case SysConReg::CLKEN:
+            std::puts("[SysCon  ] Read @ CLKEN");
+
+            return 0;
         case SysConReg::GPIOCLKEN:
             std::puts("[SysCon  ] Read @ GPIOCLKEN");
 
-            return gpioclken;
+            return r.gpioclken;
         case SysConReg::CLKSEL2:
             std::puts("[SysCon  ] Read @ CLKSEL2");
 
@@ -458,19 +469,19 @@ u32 read(u32 addr) {
         case SysConReg::SPICLK:
             std::puts("[SysCon  ] Read @ SPICLK");
 
-            return spiclk;
+            return r.spiclk;
         case SysConReg::PLLFREQ:
             std::puts("[SysCon  ] Read @ PLLFREQ");
 
-            return pllfreq;
+            return r.pllfreq;
         case SysConReg::IOEN:
             std::puts("[SysCon  ] Read @ IOEN");
 
-            return ioen;
+            return r.ioen;
         case SysConReg::GPIOEN:
             std::puts("[SysCon  ] Read @ GPIOEN");
 
-            return gpioen;
+            return r.gpioen;
         case SysConReg::FUSECONFIG:
             std::puts("[SysCon  ] Read @ FUSECONFIG");
 
@@ -478,7 +489,7 @@ u32 read(u32 addr) {
         case SysConReg::UNKNOWN1:
             std::printf("[SysCon  ] Unknown read @ 0x%08X\n", addr);
 
-            return unknown[1];
+            return r.unknown[1];
         default:
             std::printf("[SysCon  ] Unhandled read @ 0x%08X\n", addr);
 
@@ -507,40 +518,47 @@ u32 readSerial(u32 addr) {
     }
 }
 
-void write(u32 addr, u32 data) {
+void write(int cpuID, u32 addr, u32 data) {
+    auto &r = regs[cpuID];
+
     switch ((SysConReg)addr) {
         case SysConReg::NMIFLAG:
             std::printf("[SysCon  ] Write @ NMIFLAG = 0x%08X\n", data);
 
-            nmiflag &= ~data;
+            r.nmiflag &= ~data;
             break;
         case SysConReg::UNKNOWN0:
             std::printf("[SysCon  ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
 
-            unknown[0] = data;
+            r.unknown[0] = data;
             break;
         case SysConReg::RAMSIZE:
             std::printf("[SysCon  ] Write @ RAMSIZE = 0x%08X\n", data);
 
-            ramsize = data;
+            r.ramsize = data;
             break;
         case SysConReg::RESETEN:
             std::printf("[SysCon  ] Write @ RESETEN = 0x%08X\n", data);
 
-            if (!(reseten & 2) && (data & 2)) resetCPU();
-            if (!(reseten & 4) && (data & 4)) resetME();
+            if (cpuID == 0) {
+                if (!(regs[0].reseten & 2) && (data & 2)) resetCPU();
+                if (!(regs[0].reseten & 4) && (data & 4)) resetME();
+            }
 
-            reseten = data;
+            r.reseten = data;
             break;
         case SysConReg::BUSCLKEN:
             std::printf("[SysCon  ] Write @ BUSCLKEN = 0x%08X\n", data);
 
-            busclken = data;
+            r.busclken = data;
+            break;
+        case SysConReg::CLKEN:
+            std::printf("[SysCon  ] Write @ CLKEN = 0x%08X\n", data);
             break;
         case SysConReg::GPIOCLKEN:
             std::printf("[SysCon  ] Write @ GPIOCLKEN = 0x%08X\n", data);
 
-            gpioclken = data;
+            r.gpioclken = data;
             break;
         case SysConReg::CLKSEL2:
             std::printf("[SysCon  ] Write @ CLKSEL2 = 0x%08X\n", data);
@@ -548,22 +566,22 @@ void write(u32 addr, u32 data) {
         case SysConReg::SPICLK:
             std::printf("[SysCon  ] Write @ SPICLK = 0x%08X\n", data);
 
-            spiclk = data;
+            r.spiclk = data;
             break;
         case SysConReg::IOEN:
             std::printf("[SysCon  ] Write @ IOEN = 0x%08X\n", data);
 
-            ioen = data;
+            r.ioen = data;
             break;
         case SysConReg::GPIOEN:
             std::printf("[SysCon  ] Write @ GPIOEN = 0x%08X\n", data);
 
-            gpioen = data;
+            r.gpioen = data;
             break;
         case SysConReg::UNKNOWN1:
             std::printf("[SysCon  ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
 
-            unknown[1] = data;
+            r.unknown[1] = data;
             break;
         default:
             std::printf("[SysCon  ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
