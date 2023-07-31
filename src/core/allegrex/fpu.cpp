@@ -21,6 +21,7 @@ enum class SingleOpcode {
     DIV = 0x03,
     SQRT = 0x04,
     MOV = 0x06,
+    TRUNCW = 0x0D,
 };
 
 const char *fpuName[] = {
@@ -162,6 +163,18 @@ void FPU::iSUB(u32 instr) {
     }
 }
 
+// TRUNCate To Word
+void FPU::iTRUNCW(u32 instr) {
+    const auto fd = getFd(instr);
+    const auto fs = getFs(instr);
+
+    set(fd, (i32)std::trunc(getF32(fs)));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] TRUNC.W.S F%u, F%u; F%u = 0x%08X\n", fpuName[cpuID], fd, fs, fd, get(fd));
+    }
+}
+
 void FPU::doSingle(u32 instr) {
     const auto opcode = instr & 0x3F;
 
@@ -183,6 +196,9 @@ void FPU::doSingle(u32 instr) {
             break;
         case SingleOpcode::MOV:
             iMOV(instr);
+            break;
+        case SingleOpcode::TRUNCW:
+            iTRUNCW(instr);
             break;
         default:
             std::printf("Unhandled %s Single instruction 0x%02X (0x%08X)\n", fpuName[cpuID], opcode, instr);

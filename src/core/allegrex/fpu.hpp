@@ -40,6 +40,7 @@ private:
     void iMUL(u32 instr);
     void iSQRT(u32 instr);
     void iSUB(u32 instr);
+    void iTRUNCW(u32 instr);
 
     // Word
     void iCVTS(u32 instr);
