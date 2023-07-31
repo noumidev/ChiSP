@@ -20,12 +20,14 @@ constexpr i64 SYSCON_OP_CYCLES = 1 << 16;
 constexpr u32 BARYON_VERSION  = 0x00110001;
 constexpr u32 TACHYON_VERSION = 0x40000001;
 
-constexpr u32 FUSECONFIG = 0x00002C00;
+constexpr u32 FUSECONFIG = 0x00001100; // Matches Baryon version? TODO: check this
 
-constexpr u32 BATTERY_TEMP = 20;       // 20C?
-constexpr u32 BATTERY_VOLT = 3800;     // 3800mV
-constexpr u32 BATTERY_ELEC = 3800;     // ??
-constexpr u32 BATTERY_FULL_CAP = 1800; // 1800mAh
+constexpr u32 BATTERY_TEMP = 20;         // 20C?
+constexpr u32 BATTERY_VOLT = 4150;       // 4150mV
+constexpr u32 BATTERY_ELEC = 4150;       // ??
+constexpr u32 BATTERY_FULL_CAP = 1800;   // 1800mAh
+constexpr u32 BATTERY_CURR_CAP = 1800;   // 1800mAh
+constexpr u32 BATTERY_LIMIT_TIME = 400; // Taken from JPCSP
 
 enum class SysConReg {
     NMIEN = 0x1C100000,
@@ -77,6 +79,7 @@ enum class SysConCommand {
     BATTERY_GET_VOLT = 0x63,
     BATTERY_GET_ELEC = 0x64,
     BATTERY_GET_FULL_CAP = 0x67,
+    BATTERY_GET_LIMIT_TIME = 0x69,
 };
 
 // NMI registers
@@ -182,7 +185,7 @@ void commonRead(SysConCommand cmd) {
         case SysConCommand::GET_POWER_SUPPLY_STATUS:
             std::puts("[SysCon  ] Get Power Supply Status");
 
-            data = 0xC2; // JPCSP returns this value
+            data = 0xC2; // Battery equipped and charging
             break;
         case SysConCommand::GET_WAKE_UP_FACTOR:
             std::puts("[SysCon  ] Get Wake Up Factor");
@@ -249,6 +252,9 @@ void batteryCommon(SysConCommand cmd, int len, const u8 *data) {
         case SysConCommand::BATTERY_GET_FULL_CAP:
             std::puts("[SysCon  ] Battery Get Full Cap");
             break;
+        case SysConCommand::BATTERY_GET_LIMIT_TIME:
+            std::puts("[SysCon  ] Battery Get Limit Time");
+            break;
         default:
             std::printf("Unhandled SysCon battery command 0x%02X\n", (u8)cmd);
 
@@ -265,10 +271,10 @@ void cmdBatteryGetStatusCap() {
 
     writeResponse(4);
 
-    rxQueue.push(((u8 *)&BATTERY_FULL_CAP)[0]);
-    rxQueue.push(((u8 *)&BATTERY_FULL_CAP)[1]);
-    rxQueue.push(((u8 *)&BATTERY_FULL_CAP)[2]);
-    rxQueue.push(((u8 *)&BATTERY_FULL_CAP)[3]);
+    rxQueue.push(((u8 *)&BATTERY_CURR_CAP)[0]);
+    rxQueue.push(((u8 *)&BATTERY_CURR_CAP)[1]);
+    rxQueue.push(((u8 *)&BATTERY_CURR_CAP)[2]);
+    rxQueue.push(((u8 *)&BATTERY_CURR_CAP)[3]);
 }
 
 void cmdGetTimestamp() {
@@ -328,7 +334,7 @@ void doCommand() {
     const auto cmd = getTxQueue();
     const auto len = getTxQueue();
 
-    rxQueue.push(cmd); // ??
+    rxQueue.push(0x01); // Baryon status (AC plugged in)
 
     switch ((SysConCommand)cmd) {
         case SysConCommand::GET_BARYON_VERSION:
@@ -393,6 +399,9 @@ void doCommand() {
             break;
         case SysConCommand::BATTERY_GET_FULL_CAP:
             batteryCommon(SysConCommand::BATTERY_GET_FULL_CAP, 4, (u8 *)&BATTERY_FULL_CAP);
+            break;
+        case SysConCommand::BATTERY_GET_LIMIT_TIME:
+            batteryCommon(SysConCommand::BATTERY_GET_LIMIT_TIME, 4, (u8 *)&BATTERY_LIMIT_TIME);
             break;
         default:
             std::printf("Unhandled SysCon command 0x%02X, length: %u\n", cmd, len);
