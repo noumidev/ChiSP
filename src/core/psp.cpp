@@ -18,6 +18,8 @@
 #include "allegrex/allegrex.hpp"
 #include "allegrex/interpreter.hpp"
 #include "crypto/kirk.hpp"
+#include "umd/ata.hpp"
+#include "umd/umd.hpp"
 
 namespace psp {
 
@@ -41,6 +43,8 @@ void init(const char *bootPath, const char *nandPath) {
     kirk::init();
     syscon::init();
     systime::init();
+    umd::init();
+    umd::ata::init();
 
     std::puts("[PSP     ] OK");
 }

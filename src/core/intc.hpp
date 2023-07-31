@@ -12,6 +12,7 @@ namespace psp::intc {
 enum class InterruptSource {
     UART = 0,
     GPIO = 4,
+    UMD  = 6,
     I2C  = 12,
     SysTime = 19,
     NAND = 20,
