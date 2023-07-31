@@ -50,7 +50,7 @@ enum class NANDCommand {
 enum class NANDStatus {
     ERASE_ERROR  = 1 << 0,
     DEVICE_READY = 1 << 6,
-    WRITE_PROTECT = 1 << 7,
+    NOT_WRITE_PROTECTED = 1 << 7,
 };
 
 enum class NANDState {
@@ -78,11 +78,11 @@ u32 serialIdx, serialSize;
 
 u32 control, nandpage, dmapage, dmactrl, dmaintr;
 
-u32 deviceStatus = (u32)NANDStatus::WRITE_PROTECT | (u32)NANDStatus::DEVICE_READY; // NAND chip status
+u32 deviceStatus = (u32)NANDStatus::NOT_WRITE_PROTECTED | (u32)NANDStatus::DEVICE_READY; // NAND chip status
 
 NANDState state = NANDState::IDLE;
 
-u64 idFinishTransfer, idFinishErase;
+u64 idFinishTransfer, idFinishErase, idUnlockNand;
 
 void setSerialSize(u32 size) {
     serialSize = size;
@@ -181,13 +181,19 @@ void doCommand(u8 cmd) {
         case NANDCommand::RESET:
             std::puts("[NAND    ] Reset");
 
-            deviceStatus = (u32)NANDStatus::WRITE_PROTECT | (u32)NANDStatus::DEVICE_READY;
+            assert(deviceStatus & (u32)NANDStatus::DEVICE_READY);
+
+            deviceStatus = (u32)NANDStatus::NOT_WRITE_PROTECTED | (u32)NANDStatus::DEVICE_READY;
             break;
         default:
             std::printf("Unhandled NAND command 0x%02X\n", cmd);
 
             exit(0);
     }
+}
+
+void unlockNAND() {
+    deviceStatus |= (u32)NANDStatus::NOT_WRITE_PROTECTED;
 }
 
 // Loads a NAND image
@@ -197,6 +203,7 @@ void init(const char *nandPath) {
 
     idFinishTransfer = scheduler::registerEvent([](int) {finishTransfer();});
     idFinishErase = scheduler::registerEvent([](int) {finishErase();});
+    idUnlockNand = scheduler::registerEvent([](int) {unlockNAND();});
 
     std::puts("[NAND    ] OK");
 }
@@ -210,7 +217,7 @@ u32 read(u32 addr) {
             return control;
         case NANDReg::STATUS:
             std::puts("[NAND    ] Read @ STATUS");
-            return (deviceStatus & 0x80) | ((deviceStatus >> 6) & 1);
+            return (deviceStatus & (u32)NANDStatus::NOT_WRITE_PROTECTED) | ((deviceStatus >> 6) & 1);
         case NANDReg::DMACTRL:
             std::puts("[NAND    ] Read @ DMACTRL");
             return dmactrl;
@@ -243,7 +250,9 @@ void write(u32 addr, u32 data) {
         case NANDReg::STATUS:
             std::printf("[NAND    ] Write @ STATUS = 0x%08X\n", data);
 
-            deviceStatus = (data & (u32)NANDStatus::WRITE_PROTECT) | (deviceStatus & 0x41); // Software can write write-prot bit
+            if (!(deviceStatus & (u32)NANDStatus::NOT_WRITE_PROTECTED) && (data & (u32)NANDStatus::NOT_WRITE_PROTECTED)) {
+                scheduler::addEvent(idUnlockNand, 0, NAND_OP_CYCLES);
+            }
             break;
         case NANDReg::COMMAND:
             std::printf("[NAND    ] Write @ COMMAND = 0x%08X\n", data);
@@ -272,6 +281,10 @@ void write(u32 addr, u32 data) {
             break;
         case NANDReg::RESET:
             std::printf("[NAND    ] Write @ RESET = 0x%08X\n", data);
+
+            assert(deviceStatus & (u32)NANDStatus::DEVICE_READY);
+
+            deviceStatus = (u32)NANDStatus::NOT_WRITE_PROTECTED | (u32)NANDStatus::DEVICE_READY;
             break;
         case NANDReg::DMAPAGE:
             std::printf("[NAND    ] Write @ DMAPAGE = 0x%08X\n", data);
