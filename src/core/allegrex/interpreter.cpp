@@ -59,6 +59,7 @@ enum class Opcode {
     BEQL = 0x14,
     BNEL = 0x15,
     BLEZL = 0x16,
+    BGTZL = 0x17,
     SPECIAL2 = 0x1C,
     SPECIAL3 = 0x1F,
     LB  = 0x20,
@@ -98,6 +99,7 @@ enum class SPECIAL {
     CLZ = 0x16,
     MULT  = 0x18,
     MULTU = 0x19,
+    DIV  = 0x1A,
     DIVU = 0x1B,
     ADD  = 0x20,
     ADDU = 0x21,
@@ -388,6 +390,22 @@ void iBGTZ(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Branch if Greater Than Zero Likely
+void iBGTZL(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+
+    const auto target = allegrex->getPC() + offset;
+
+    const auto s = allegrex->get(rs);
+
+    allegrex->doBranch(target, (i32)s > 0, Reg::R0, true);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BGTZL %s, 0x%08X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], target, regNames[rs], s);
+    }
+}
+
 // BIT REVerse
 void iBITREV(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -608,6 +626,24 @@ void iCTC(Allegrex *allegrex, int copN, u32 instr) {
     }
 }
 
+/* DIVide */
+void iDIV(Allegrex *allegrex, u32 instr) {
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    const auto n = (i32)allegrex->get(rs);
+    const auto d = (i32)allegrex->get(rt);
+
+    assert((d != 0) && !((n == INT32_MIN) && (d == -1)));
+
+    allegrex->set(Reg::LO, n / d);
+    allegrex->set(Reg::HI, n % d);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] DIV %s, %s; LO = 0x%08X, HI = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], allegrex->get(Reg::LO), allegrex->get(Reg::HI));
+    }
+}
+
 /* DIVide Unsigned */
 void iDIVU(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -616,10 +652,13 @@ void iDIVU(Allegrex *allegrex, u32 instr) {
     const auto n = allegrex->get(rs);
     const auto d = allegrex->get(rt);
 
-    assert(d != 0);
-
-    allegrex->set(Reg::LO, n / d);
-    allegrex->set(Reg::HI, n % d);
+    if (!d) {
+        allegrex->set(Reg::LO, -1);
+        allegrex->set(Reg::HI, n);
+    } else {
+        allegrex->set(Reg::LO, n / d);
+        allegrex->set(Reg::HI, n % d);
+    }
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] DIVU %s, %s; LO = 0x%08X, HI = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rs], regNames[rt], allegrex->get(Reg::LO), allegrex->get(Reg::HI));
@@ -1637,6 +1676,9 @@ i64 doInstr(Allegrex *allegrex) {
                     case SPECIAL::MULTU:
                         iMULTU(allegrex, instr);
                         break;
+                    case SPECIAL::DIV:
+                        iDIV(allegrex, instr);
+                        break;
                     case SPECIAL::DIVU:
                         iDIVU(allegrex, instr);
                         break;
@@ -1830,6 +1872,9 @@ i64 doInstr(Allegrex *allegrex) {
         case Opcode::BLEZL:
             iBLEZL(allegrex, instr);
             break;
+        case Opcode::BGTZL:
+            iBGTZL(allegrex, instr);
+            break;
         case Opcode::SPECIAL2:
             {
                 const auto funct = getFunct(instr);
@@ -1950,29 +1995,11 @@ void run(Allegrex *allegrex, i64 runCycles) {
 
         cpc = allegrex->getPC();
 
-        if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0);
+        if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0); // I still need this hack :()
 
         allegrex->advanceDelay();
 
         i += doInstr(allegrex);
-
-        if (cpc == 0x8800AB74) {
-            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
-
-            std::printf("[PSP     ] %s", msgPtr);
-        }
-
-        if (cpc == 0x8802AA20) { // Kernel printf hook
-            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
-            const auto size = allegrex->get(Reg::V0);
-
-            char msg[size + 1];
-
-            msg[size] = 0;
-            std::memcpy(msg, msgPtr, size);
-
-            std::printf("[PSP     ] %s\n", msg);
-        }
     }
 }
 
