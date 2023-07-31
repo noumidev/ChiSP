@@ -15,7 +15,7 @@
 
 namespace psp::nand {
 
-constexpr i64 NAND_OP_CYCLES = 1024;
+constexpr i64 NAND_OP_CYCLES = 1 << 16;
 
 constexpr u64 PAGE_SIZE = 512;
 constexpr u64 PAGE_SIZE_ECC = PAGE_SIZE + 16;
@@ -219,13 +219,13 @@ u32 read(u32 addr) {
             std::puts("[NAND    ] Read @ STATUS");
             return (deviceStatus & (u32)NANDStatus::NOT_WRITE_PROTECTED) | ((deviceStatus >> 6) & 1);
         case NANDReg::DMACTRL:
-            std::puts("[NAND    ] Read @ DMACTRL");
+            //std::puts("[NAND    ] Read @ DMACTRL");
             return dmactrl;
         case NANDReg::DMASTATUS:
             std::puts("[NAND    ] Read @ DMASTATUS");
             return 0;
         case NANDReg::DMAINTR:
-            std::puts("[NAND    ] Read @ DMAINTR");
+            //std::puts("[NAND    ] Read @ DMAINTR");
             return dmaintr;
         case NANDReg::SERIALDATA:
             std::puts("[NAND    ] Read @ SERIALDATA");
