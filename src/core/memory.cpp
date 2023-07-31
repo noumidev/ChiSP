@@ -20,6 +20,8 @@
 #include "syscon.hpp"
 #include "systime.hpp"
 #include "crypto/kirk.hpp"
+#include "umd/ata.hpp"
+#include "umd/umd.hpp"
 #include "../common/file.hpp"
 
 namespace psp::memory {
@@ -74,6 +76,8 @@ u8 read8(u32 addr) {
         return edram[addr & ((u32)MemorySize::EDRAM - 1)];
     } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         return dram[addr & ((u32)MemorySize::DRAM - 1)];
+    } else if (inRange(addr, (u64)MemoryBase::ATA1, (u64)MemorySize::ATA1)) {
+        return umd::ata::readATA1(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         return resetVector[addr & (resetSize - 1)];
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -157,8 +161,12 @@ u32 read32(u32 addr) {
         std::printf("[GE      ] Unhandled read @ 0x%08X\n", addr);
 
         return 0;
+    } else if (inRange(addr, (u64)MemoryBase::ATA0, (u64)MemorySize::ATA0)) {
+        return umd::ata::readATA0(addr);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::UMD, (u64)MemorySize::UMD)) {
+        return umd::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::Audio, (u64)MemorySize::Audio)) {
         std::printf("[Audio   ] Unhandled read @ 0x%08X\n", addr);
 
@@ -225,6 +233,8 @@ void write8(u32 addr, u8 data) {
         edram[addr & ((u32)MemorySize::EDRAM - 1)] = data;
     } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         dram[addr & ((u32)MemorySize::DRAM - 1)] = data;
+    } else if (inRange(addr, (u64)MemoryBase::ATA1, (u64)MemorySize::ATA1)) {
+        return umd::ata::writeATA1(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         resetVector[addr & (resetSize - 1)] = data;
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -289,8 +299,12 @@ void write32(u32 addr, u32 data) {
         return nand::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
         std::printf("[GE      ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::ATA0, (u64)MemorySize::ATA0)) {
+        return umd::ata::writeATA0(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::UMD, (u64)MemorySize::UMD)) {
+        return umd::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::Audio, (u64)MemorySize::Audio)) {
         std::printf("[Audio   ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::LCDC, (u64)MemorySize::LCDC)) {
@@ -465,6 +479,8 @@ void meWrite32(u32 addr, u32 data) {
 
     if (inRange(addr, (u64)MemoryBase::MESPRAM, (u64)MemorySize::EDRAM)) {
         std::memcpy(&meSPRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::MEUnk0, (u64)MemorySize::MEUnk0)) {
+        std::printf("[Memory  ] Unhandled ME write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         std::memcpy(&dram[addr & ((u32)MemorySize::DRAM - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::MEMPROT, (u64)MemorySize::MEMPROT)) {
