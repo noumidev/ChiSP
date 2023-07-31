@@ -14,10 +14,13 @@ namespace psp::intc {
 
 enum class INTCRegs {
     FLAG0 = 0x1C300000,
+    OTHERFLAG0 = 0x1C300004,
     MASK0 = 0x1C300008,
     FLAG1 = 0x1C300010,
+    OTHERFLAG1 = 0x1C300014,
     MASK1 = 0x1C300018,
     FLAG2 = 0x1C300020,
+    OTHERFLAG2 = 0x1C300024,
     MASK2 = 0x1C300028,
 };
 
@@ -44,6 +47,16 @@ u32 read(int cpuID, u32 addr) {
                 return flag[cpuID][idx];
             }
             break;
+        case INTCRegs::OTHERFLAG0:
+        case INTCRegs::OTHERFLAG1:
+        case INTCRegs::OTHERFLAG2:
+            {
+                const auto idx = (addr >> 4) & 3;
+
+                //std::printf("[INTC    ] Read @ OTHERFLAG%u\n", idx);
+
+                return 0;
+            }
         case INTCRegs::MASK0:
         case INTCRegs::MASK1:
         case INTCRegs::MASK2:
