@@ -38,9 +38,11 @@ enum class SysConReg {
     BUSCLKEN  = 0x1C100050,
     CLKEN  = 0x1C100054,
     GPIOCLKEN = 0x1C100058,
+    CLKSEL1 = 0x1C10005C,
     CLKSEL2 = 0x1C100060,
     SPICLK  = 0x1C100064,
     PLLFREQ = 0x1C100068,
+    AVCPOWER = 0x1C100070,
     IOEN = 0x1C100078,
     GPIOEN = 0x1C10007C,
     FUSECONFIG = 0x1C100098,
@@ -99,6 +101,9 @@ struct SysConRegs {
 };
 
 SysConRegs regs[2];
+
+u32 avcpower;
+u32 clksel1, clksel2;
 
 // Serial registers
 u32 serialflags;
@@ -462,14 +467,22 @@ u32 read(int cpuID, u32 addr) {
             std::puts("[SysCon  ] Read @ GPIOCLKEN");
 
             return r.gpioclken;
+        case SysConReg::CLKSEL1:
+            std::puts("[SysCon  ] Read @ CLKSEL1");
+
+            return clksel1;
         case SysConReg::CLKSEL2:
             std::puts("[SysCon  ] Read @ CLKSEL2");
 
-            return 0;
+            return clksel2;
         case SysConReg::SPICLK:
             std::puts("[SysCon  ] Read @ SPICLK");
 
             return r.spiclk;
+        case SysConReg::AVCPOWER:
+            std::puts("[SysCon  ] Read @ AVCPOWER");
+
+            return avcpower;
         case SysConReg::PLLFREQ:
             std::puts("[SysCon  ] Read @ PLLFREQ");
 
@@ -560,13 +573,25 @@ void write(int cpuID, u32 addr, u32 data) {
 
             r.gpioclken = data;
             break;
+        case SysConReg::CLKSEL1:
+            std::printf("[SysCon  ] Write @ CLKSEL1 = 0x%08X\n", data);
+
+            clksel1 = data;
+            break;
         case SysConReg::CLKSEL2:
             std::printf("[SysCon  ] Write @ CLKSEL2 = 0x%08X\n", data);
+
+            clksel2 = data;
             break;
         case SysConReg::SPICLK:
             std::printf("[SysCon  ] Write @ SPICLK = 0x%08X\n", data);
 
             r.spiclk = data;
+            break;
+        case SysConReg::AVCPOWER: // Shared?
+            std::printf("[SysCon  ] Write @ AVCPOWER = 0x%08X\n", data);
+
+            avcpower = data;
             break;
         case SysConReg::IOEN:
             std::printf("[SysCon  ] Write @ IOEN = 0x%08X\n", data);
