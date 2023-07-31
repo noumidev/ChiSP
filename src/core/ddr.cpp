@@ -26,6 +26,10 @@ enum class DDRReg {
 
 u32 read(u32 addr) {
     switch ((DDRReg)addr) {
+        case DDRReg::FLUSH:
+            std::puts("[DDR     ] Read @ FLUSH");
+
+            return 0;
         case DDRReg::UNKNOWN0:
             std::printf("[DDR     ] Unknown read @ 0x%08X\n", addr);
 
@@ -47,6 +51,9 @@ u32 read(u32 addr) {
 
 void write(u32 addr, u32 data) {
     switch ((DDRReg)addr) {
+        case DDRReg::FLUSH:
+            std::printf("[DDR     ] Write @ FLUSH = 0x%08X\n", data);
+            break;
         case DDRReg::UNKNOWN0:
             std::printf("[DDR     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
 
