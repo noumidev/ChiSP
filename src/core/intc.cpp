@@ -21,13 +21,17 @@ enum class INTCRegs {
     MASK2 = 0x1C300028,
 };
 
-u32 flag[3], mask[3];
+u32 flag[2][3], mask[2][3];
 
 void checkInterrupt() {
-    setIRQPending((flag[0] & mask[0]) | (flag[1] & mask[1]) | (flag[2] & mask[2]));
+    setIRQPending((flag[0][0] & mask[0][0]) | (flag[0][1] & mask[0][1]) | (flag[0][2] & mask[0][2]));
 }
 
-u32 read(u32 addr) {
+void meCheckInterrupt() {
+    setIRQPending((flag[1][0] & mask[1][0]) | (flag[1][1] & mask[1][1]) | (flag[1][2] & mask[1][2]));
+}
+
+u32 read(int cpuID, u32 addr) {
     switch ((INTCRegs)addr) {
         case INTCRegs::FLAG0:
         case INTCRegs::FLAG1:
@@ -37,7 +41,7 @@ u32 read(u32 addr) {
 
                 std::printf("[INTC    ] Read @ FLAG%u\n", idx);
 
-                return flag[idx];
+                return flag[cpuID][idx];
             }
             break;
         case INTCRegs::MASK0:
@@ -48,7 +52,7 @@ u32 read(u32 addr) {
 
                 std::printf("[INTC    ] Read @ MASK%u\n", idx);
 
-                return mask[idx];
+                return mask[cpuID][idx];
             }
             break;
         default:
@@ -58,7 +62,7 @@ u32 read(u32 addr) {
     }
 }
 
-void write(u32 addr, u32 data) {
+void write(int cpuID, u32 addr, u32 data) {
     switch ((INTCRegs)addr) {
         case INTCRegs::FLAG0:
         case INTCRegs::FLAG1:
@@ -68,7 +72,7 @@ void write(u32 addr, u32 data) {
 
                 std::printf("[INTC    ] Write @ FLAG%u = 0x%08X\n", idx, data);
 
-                flag[idx] &= ~data;
+                flag[cpuID][idx] &= ~data;
             }
             break;
         case INTCRegs::MASK0:
@@ -79,8 +83,8 @@ void write(u32 addr, u32 data) {
 
                 std::printf("[INTC    ] Write @ MASK%u = 0x%08X\n", idx, data);
 
-                mask[idx] = data;
-                flag[idx] &= data; // I think this clears FLAG?? Test this!
+                mask[cpuID][idx] = data;
+                flag[cpuID][idx] &= data; // I think this clears FLAG?? Test this!
             }
             break;
         default:
@@ -89,7 +93,11 @@ void write(u32 addr, u32 data) {
             exit(0);
     }
 
-    checkInterrupt();
+    if (cpuID == 0) {
+        checkInterrupt();
+    } else {
+        meCheckInterrupt();
+    }
 }
 
 void sendIRQ(InterruptSource irqSource) {
@@ -100,14 +108,14 @@ void sendIRQ(InterruptSource irqSource) {
     // Get the right flag/mask regs
     u32 *irqFlag, *irqMask;
     if (irqNum < 32) {
-        irqFlag = &flag[0];
-        irqMask = &mask[0];
+        irqFlag = &flag[0][0];
+        irqMask = &mask[0][0];
     } else if (irqNum < 64) {
-        irqFlag = &flag[1];
-        irqMask = &mask[1];
+        irqFlag = &flag[0][1];
+        irqMask = &mask[0][1];
     } else {
-        irqFlag = &flag[2];
-        irqMask = &mask[2];
+        irqFlag = &flag[0][2];
+        irqMask = &mask[0][2];
     }
 
     // Mask number to 0-31 range
@@ -117,6 +125,34 @@ void sendIRQ(InterruptSource irqSource) {
         *irqFlag |= 1 << irqNum;
 
         setIRQPending(true); // Always pending if we get here
+    }
+}
+
+void meSendIRQ(InterruptSource irqSource) {
+    auto irqNum = (u32)irqSource;
+
+    std::printf("[INTC    ] Requesting ME interrupt %u\n", irqNum);
+
+    // Get the right flag/mask regs
+    u32 *irqFlag, *irqMask;
+    if (irqNum < 32) {
+        irqFlag = &flag[1][0];
+        irqMask = &mask[1][0];
+    } else if (irqNum < 64) {
+        irqFlag = &flag[1][1];
+        irqMask = &mask[1][1];
+    } else {
+        irqFlag = &flag[1][2];
+        irqMask = &mask[1][2];
+    }
+
+    // Mask number to 0-31 range
+    irqNum &= 0x1F;
+
+    if (*irqMask & (1 << irqNum)) {
+        *irqFlag |= 1 << irqNum;
+
+        meSetIRQPending(true); // Always pending if we get here
     }
 }
 
