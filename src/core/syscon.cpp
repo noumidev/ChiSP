@@ -527,9 +527,10 @@ void write(u32 addr, u32 data) {
         case SysConReg::RESETEN:
             std::printf("[SysCon  ] Write @ RESETEN = 0x%08X\n", data);
 
-            reseten = data;
+            if (!(reseten & 2) && (data & 2)) resetCPU();
+            if (!(reseten & 4) && (data & 4)) resetME();
 
-            if (data & 2) resetCPU();
+            reseten = data;
             break;
         case SysConReg::BUSCLKEN:
             std::printf("[SysCon  ] Write @ BUSCLKEN = 0x%08X\n", data);

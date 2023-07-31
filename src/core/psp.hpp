@@ -11,6 +11,8 @@ void init(const char *bootPath, const char *nandPath);
 void run();
 
 void setIRQPending(bool irqPending);
+
 void resetCPU();
+void resetME();
 
 }

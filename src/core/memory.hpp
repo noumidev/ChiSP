@@ -77,7 +77,13 @@ void write8 (u32 addr, u8  data);
 void write16(u32 addr, u16 data);
 void write32(u32 addr, u32 data);
 
-// TODO: MediaEngine read/write handlers
+u8  meRead8 (u32 addr);
+u16 meRead16(u32 addr);
+u32 meRead32(u32 addr);
+
+void meWrite8 (u32 addr, u8  data);
+void meWrite16(u32 addr, u16 data);
+void meWrite32(u32 addr, u32 data);
 
 void unmapBootROM();
 

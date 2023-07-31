@@ -342,6 +342,106 @@ void write32(u32 addr, u32 data) {
     }
 }
 
+u8 meRead8(u32 addr) {
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
+    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+        return sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)];
+    } else {
+        switch (addr) {
+            default:
+                std::printf("Unhandled ME read8 @ 0x%08X\n", addr);
+
+                exit(0);
+        }
+    }
+}
+
+u16 meRead16(u32 addr) {
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
+    u16 data;
+
+    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&data, &sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u16));
+    } else {
+        switch (addr) {
+            default:
+                std::printf("Unhandled ME read16 @ 0x%08X\n", addr);
+
+                exit(0);
+        }
+    }
+
+    return data;
+}
+
+u32 meRead32(u32 addr) {
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
+    u32 data;
+
+    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&data, &sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u32));
+    } else {
+        switch (addr) {
+            default:
+                std::printf("Unhandled ME read32 @ 0x%08X\n", addr);
+
+                exit(0);
+        }
+    }
+
+    return data;
+}
+
+void meWrite8(u32 addr, u8 data) {
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
+    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+        sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)] = data;
+    } else {
+        switch (addr) {
+            default:
+                std::printf("Unhandled ME write8 @ 0x%08X = 0x%02X\n", addr, data);
+
+                exit(0);
+        }
+    }
+}
+
+void meWrite16(u32 addr, u16 data) {
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
+    if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u16));
+    } else {
+        switch (addr) {
+            default:
+                std::printf("Unhandled ME write16 @ 0x%08X = 0x%04X\n", addr, data);
+
+                exit(0);
+        }
+    }
+}
+
+void meWrite32(u32 addr, u32 data) {
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
+    if (inRange(addr, (u64)MemoryBase::SysCon, (u64)MemorySize::SysCon)) {
+        return syscon::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::BootROM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u32));
+    } else {
+        switch (addr) {
+            default:
+                std::printf("Unhandled ME write32 @ 0x%08X = 0x%08X\n", addr, data);
+
+                exit(0);
+        }
+    }
+}
+
 void unmapBootROM() {
     resetVector = sharedRAM.data();
     resetSize = (u32)MemorySize::EDRAM;

@@ -22,12 +22,6 @@ const char *typeNames[] = {
 void Allegrex::init(Type type) {
     this->type = type;
 
-    if (type == Type::MediaEngine) {
-        std::puts("MediaEngine is not supported");
-
-        exit(0);
-    }
-
     cop0.init((int)type);
     fpu.init((int)type);
 
@@ -41,7 +35,13 @@ void Allegrex::init(Type type) {
 
     // Install read/write handlers
     if (type == Type::MediaEngine) {
-        exit(0);
+        read8  = &memory::meRead8;
+        read16 = &memory::meRead16;
+        read32 = &memory::meRead32;
+
+        write8  = &memory::meWrite8;
+        write16 = &memory::meWrite16;
+        write32 = &memory::meWrite32;
     } else {
         read8  = &memory::read8;
         read16 = &memory::read16;
@@ -60,6 +60,8 @@ void Allegrex::reset() {
     std::memset(regs, 0, sizeof(regs));
 
     inDelaySlot[0] = inDelaySlot[1] = false;
+
+    isHalted = false;
 
     // Set initial PC
     setPC(BOOT_EXCEPTION_BASE);

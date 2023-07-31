@@ -23,13 +23,17 @@ namespace psp {
 
 using namespace allegrex;
 
-Allegrex cpu;
+Allegrex cpu, me;
 
 void init(const char *bootPath, const char *nandPath) {
     memory::init(bootPath);
     nand::init(nandPath);
 
     cpu.init(Type::Allegrex);
+    me.init(Type::MediaEngine);
+
+    // MediaEngine is booted later on
+    me.isHalted = true;
 
     display::init();
     hpremote::init();
@@ -46,6 +50,7 @@ void run() {
         const auto runCycles = scheduler::getRunCycles();
 
         interpreter::run(&cpu, runCycles);
+        interpreter::run(&me , runCycles >> 1);
     }
 }
 
@@ -54,15 +59,13 @@ void setIRQPending(bool irqPending) {
 }
 
 void resetCPU() {
-    static auto hasReset = false;
+    cpu.reset();
 
-    if (!hasReset) {
-        cpu.reset();
+    memory::unmapBootROM();
+}
 
-        memory::unmapBootROM();
-
-        hasReset = true;
-    }
+void resetME() {
+    me.reset();
 }
 
 }
