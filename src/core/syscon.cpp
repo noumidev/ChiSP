@@ -72,11 +72,13 @@ enum class SysConCommand {
     READ_SCRATCHPAD  = 0x24,
     SEND_SETPARAM = 0x25,
     CTRL_TACHYON_WDT = 0x31,
+    RESET_DEVICE = 0x32,
     CTRL_ANALOG_XY_POLLING = 0x33,
     CTRL_HR_POWER = 0x34,
     CTRL_VOLTAGE  = 0x42,
     GET_POWER_STATUS = 0x46,
     CTRL_LED = 0x47,
+    CTRL_LEPTON_POWER = 0x4B,
     BATTERY_GET_STATUS_CAP = 0x61,
     BATTERY_GET_TEMP = 0x62,
     BATTERY_GET_VOLT = 0x63,
@@ -227,6 +229,9 @@ void commonWrite(SysConCommand cmd) {
         case SysConCommand::CTRL_TACHYON_WDT:
             std::puts("[SysCon  ] Ctrl Tachyon WDT");
             break;
+        case SysConCommand::RESET_DEVICE:
+            std::puts("[SysCon  ] Reset Device");
+            break;
         case SysConCommand::CTRL_ANALOG_XY_POLLING:
             std::puts("[SysCon  ] Ctrl Analog XY Polling");
             break;
@@ -238,6 +243,9 @@ void commonWrite(SysConCommand cmd) {
             break;
         case SysConCommand::CTRL_LED:
             std::puts("[SysCon  ] Ctrl LED");
+            break;
+        case SysConCommand::CTRL_LEPTON_POWER:
+            std::puts("[SysCon  ] Ctrl Lepton Power");
             break;
         default:
             std::printf("Unhandled SysCon common write 0x%02X\n", (u8)cmd);
@@ -380,6 +388,9 @@ void doCommand() {
         case SysConCommand::CTRL_TACHYON_WDT:
             commonWrite(SysConCommand::CTRL_TACHYON_WDT);
             break;
+        case SysConCommand::RESET_DEVICE:
+            commonWrite(SysConCommand::RESET_DEVICE);
+            break;
         case SysConCommand::CTRL_ANALOG_XY_POLLING:
             commonWrite(SysConCommand::CTRL_ANALOG_XY_POLLING);
             break;
@@ -394,6 +405,9 @@ void doCommand() {
             break;
         case SysConCommand::CTRL_LED:
             commonWrite(SysConCommand::CTRL_LED);
+            break;
+        case SysConCommand::CTRL_LEPTON_POWER:
+            commonWrite(SysConCommand::CTRL_LEPTON_POWER);
             break;
         case SysConCommand::BATTERY_GET_STATUS_CAP:
             cmdBatteryGetStatusCap();
