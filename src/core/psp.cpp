@@ -58,6 +58,10 @@ void setIRQPending(bool irqPending) {
     cpu.setIRQPending(irqPending);
 }
 
+void meSetIRQPending(bool irqPending) {
+    me.setIRQPending(irqPending);
+}
+
 void resetCPU() {
     cpu.reset();
 
