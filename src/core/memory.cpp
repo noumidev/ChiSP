@@ -76,6 +76,14 @@ u8 read8(u32 addr) {
         return edram[addr & ((u32)MemorySize::EDRAM - 1)];
     } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         return dram[addr & ((u32)MemorySize::DRAM - 1)];
+    } else if (inRange(addr, (u64)MemoryBase::MS, (u64)MemorySize::MS)) {
+        std::printf("[MS      ] Unhandled read8 @ 0x%08X\n", addr);
+
+        return 0;
+    } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
+        std::printf("[WLAN    ] Unhandled read8 @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::ATA1, (u64)MemorySize::ATA1)) {
         return ata::readATA1(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
@@ -103,6 +111,14 @@ u16 read16(u32 addr) {
         std::memcpy(&data, &edram[addr & ((u32)MemorySize::EDRAM - 1)], sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         std::memcpy(&data, &dram[addr & ((u32)MemorySize::DRAM - 1)], sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::MS, (u64)MemorySize::MS)) {
+        std::printf("[MS      ] Unhandled read16 @ 0x%08X\n", addr);
+
+        return 0;
+    } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
+        std::printf("[WLAN    ] Unhandled read16 @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         std::memcpy(&data, &resetVector[addr & (resetSize - 1)], sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -157,6 +173,14 @@ u32 read32(u32 addr) {
         return ddr::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
         return nand::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::MS, (u64)MemorySize::MS)) {
+        std::printf("[MS      ] Unhandled read32 @ 0x%08X\n", addr);
+
+        return 0;
+    } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
+        std::printf("[WLAN    ] Unhandled read32 @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
         std::printf("[GE      ] Unhandled read @ 0x%08X\n", addr);
 
@@ -233,6 +257,10 @@ void write8(u32 addr, u8 data) {
         edram[addr & ((u32)MemorySize::EDRAM - 1)] = data;
     } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         dram[addr & ((u32)MemorySize::DRAM - 1)] = data;
+    } else if (inRange(addr, (u64)MemoryBase::MS, (u64)MemorySize::MS)) {
+        std::printf("[MS      ] Unhandled write8 @ 0x%08X = 0x%02X\n", addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
+        std::printf("[WLAN    ] Unhandled write8 @ 0x%08X = 0x%02X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::ATA1, (u64)MemorySize::ATA1)) {
         return ata::writeATA1(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
@@ -258,6 +286,10 @@ void write16(u32 addr, u16 data) {
         std::memcpy(&edram[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         std::memcpy(&dram[addr & ((u32)MemorySize::DRAM - 1)], &data, sizeof(u16));
+    } else if (inRange(addr, (u64)MemoryBase::MS, (u64)MemorySize::MS)) {
+        std::printf("[MS      ] Unhandled write16 @ 0x%08X = 0x%04X\n", addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
+        std::printf("[WLAN    ] Unhandled write16 @ 0x%08X = 0x%04X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         std::memcpy(&resetVector[addr & (resetSize - 1)], &data, sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -297,6 +329,10 @@ void write32(u32 addr, u32 data) {
         return ddr::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
         return nand::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::MS, (u64)MemorySize::MS)) {
+        std::printf("[MS      ] Unhandled write32 @ 0x%08X = 0x%08X\n", addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
+        std::printf("[WLAN    ] Unhandled write32 @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
         std::printf("[GE      ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::ATA0, (u64)MemorySize::ATA0)) {
