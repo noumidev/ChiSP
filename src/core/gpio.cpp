@@ -42,6 +42,12 @@ u32 capten, timercapten;
 
 u32 unknown;
 
+void checkInterrupt() {
+    if (irqen & irqstatus) {
+        intc::sendIRQ(intc::InterruptSource::GPIO);
+    }
+}
+
 void set(GPIOPin pin) {
     // TODO: check INEN??
     if (!(pins & pin)) { // Not already set?
@@ -50,9 +56,7 @@ void set(GPIOPin pin) {
         if (risingedge & pin) {
             irqstatus |= pin;
 
-            if (irqen & irqstatus) {
-                intc::sendIRQ(intc::InterruptSource::GPIO);
-            }
+            checkInterrupt();
         }
     }
 }
@@ -74,9 +78,7 @@ void clear(GPIOPin pin) {
         if (fallingedge & pin) {
             irqstatus |= pin;
 
-            if (irqen & irqstatus) {
-                intc::sendIRQ(intc::InterruptSource::GPIO);
-            }
+            checkInterrupt();
         }
     }
 }
@@ -159,6 +161,8 @@ void write(u32 addr, u32 data) {
             std::printf("[GPIO    ] Write @ IRQEN = 0x%08X\n", data);
 
             irqen = data;
+
+            checkInterrupt();
             break;
         case GPIOReg::IRQACK:
             std::printf("[GPIO    ] Write @ IRQACK = 0x%08X\n", data);
