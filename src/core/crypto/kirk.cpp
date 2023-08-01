@@ -453,6 +453,8 @@ void write(u32 addr, u32 data) {
             break;
         case KIRKReg::PRVSTS:
             std::printf("[KIRK    ] Write @ PRVSTS = 0x%08X\n", data);
+
+            intc::clearIRQ(intc::InterruptSource::KIRK);
             break;
         case KIRKReg::SRC:
             std::printf("[KIRK    ] Write @ SRC = 0x%08X\n", data);

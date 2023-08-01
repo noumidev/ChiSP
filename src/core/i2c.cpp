@@ -120,6 +120,10 @@ void write(u32 addr, u32 data) {
             std::printf("[I2C     ] Write @ IRQSTATUS = 0x%08X\n", data);
 
             irqstatus &= ~data;
+
+            if (!irqstatus) {
+                intc::clearIRQ(intc::InterruptSource::I2C);
+            }
             break;
         case I2CReg::UNKNOWN4:
             std::printf("[I2C     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);

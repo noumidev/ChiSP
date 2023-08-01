@@ -97,7 +97,6 @@ void write(int cpuID, u32 addr, u32 data) {
                 std::printf("[INTC    ] Write @ MASK%u = 0x%08X\n", idx, data);
 
                 mask[cpuID][idx] = data;
-                flag[cpuID][idx] &= data; // I think this clears FLAG?? Test this!
             }
             break;
         default:
@@ -167,6 +166,29 @@ void meSendIRQ(InterruptSource irqSource) {
 
         meSetIRQPending(true); // Always pending if we get here
     }
+}
+
+void clearIRQ(InterruptSource irqSource) {
+    auto irqNum = (u32)irqSource;
+
+    std::printf("[INTC    ] Clearing interrupt %u\n", irqNum);
+
+    // Get the right flag reg
+    u32 *irqFlag;
+    if (irqNum < 32) {
+        irqFlag = &flag[0][0];
+    } else if (irqNum < 64) {
+        irqFlag = &flag[0][1];
+    } else {
+        irqFlag = &flag[0][2];
+    }
+
+    // Mask number to 0-31 range
+    irqNum &= 0x1F;
+
+    *irqFlag &= ~(1 << irqNum);
+
+    checkInterrupt();
 }
 
 }

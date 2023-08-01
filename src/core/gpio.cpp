@@ -45,6 +45,8 @@ u32 unknown;
 void checkInterrupt() {
     if (irqen & irqstatus) {
         intc::sendIRQ(intc::InterruptSource::GPIO);
+    } else {
+        intc::clearIRQ(intc::InterruptSource::GPIO);
     }
 }
 
@@ -168,6 +170,8 @@ void write(u32 addr, u32 data) {
             std::printf("[GPIO    ] Write @ IRQACK = 0x%08X\n", data);
 
             irqstatus &= ~data;
+
+            checkInterrupt();
             break;
         case GPIOReg::CAPTEN:
             std::printf("[GPIO    ] Write @ CAPTEN = 0x%08X\n", data);

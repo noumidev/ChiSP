@@ -74,6 +74,8 @@ void write(u32 addr, u32 data) {
             std::printf("[SysTime ] Write @ ALARM = 0x%08X\n", data);
             
             alarm = data;
+
+            intc::clearIRQ(intc::InterruptSource::SysTime);
             break;
         case SysTimeReg::UNKNOWN0:
         case SysTimeReg::UNKNOWN1:

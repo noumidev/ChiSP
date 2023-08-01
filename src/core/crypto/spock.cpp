@@ -42,6 +42,8 @@ u64 idFinishCommand;
 void checkInterrupt() {
     if (irqflags & irqen) {
         intc::sendIRQ(intc::InterruptSource::UMD);
+    } else {
+        intc::clearIRQ(intc::InterruptSource::UMD);
     }
 }
 
@@ -173,16 +175,22 @@ void write(u32 addr, u32 data) {
             std::printf("[SPOCK   ] Write @ IRQCLEAR = 0x%08X\n", data);
 
             irqflags &= ~data;
+
+            checkInterrupt();
             break;
         case SPOCKReg::IRQEN:
             std::printf("[SPOCK   ] Write @ IRQEN = 0x%08X\n", data);
 
             irqen |= data;
+
+            checkInterrupt();
             break;
         case SPOCKReg::IRQDIS:
             std::printf("[SPOCK   ] Write @ IRQDIS = 0x%08X\n", data);
 
             irqen &= ~data;
+
+            checkInterrupt();
             break;
         case SPOCKReg::UNKNOWN3:
             std::printf("[SPOCK   ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);

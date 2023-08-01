@@ -98,12 +98,18 @@ u32 getSerialData() {
     return data;
 }
 
+void checkInterrupt() {
+    if (((dmaintr >> 8) & 3) & (dmaintr & 3)) {
+        intc::sendIRQ(intc::InterruptSource::NAND);
+    } else {
+        intc::clearIRQ(intc::InterruptSource::NAND);
+    }
+}
+
 void sendIRQ(int type) {
     dmaintr |= type;
 
-    if ((dmaintr >> 8) & type) {
-        intc::sendIRQ(intc::InterruptSource::NAND);
-    }
+    checkInterrupt();
 }
 
 void doDMA(bool toNAND, bool isPageEnabled, bool isSpareEnabled) {
@@ -303,7 +309,9 @@ void write(u32 addr, u32 data) {
         case NANDReg::DMAINTR:
             std::printf("[NAND    ] Write @ DMAINTR = 0x%08X\n", data);
 
-            dmaintr = data;
+            dmaintr = (data & 0xF00) | ((dmaintr & 3) & ~(data & 3));
+
+            checkInterrupt();
             break;
         case NANDReg::RESUME:
             std::printf("[NAND    ] Write @ RESUME = 0x%08X\n", data);

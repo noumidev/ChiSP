@@ -27,4 +27,6 @@ void write(int cpuID, u32 addr, u32 data);
 void sendIRQ(InterruptSource irqSource);
 void meSendIRQ(InterruptSource irqSource);
 
+void clearIRQ(InterruptSource irqSource);
+
 }
