@@ -103,6 +103,7 @@ enum class SPECIAL {
     DIVU = 0x1B,
     ADD  = 0x20,
     ADDU = 0x21,
+    SUB  = 0x22,
     SUBU = 0x23,
     AND = 0x24,
     OR  = 0x25,
@@ -1418,6 +1419,21 @@ void iSRLV(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// SUBtract
+void iSUB(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr);
+
+    // TODO: SUB overflow check?
+
+    allegrex->set(rd, allegrex->get(rs) - allegrex->get(rt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] SUB %s, %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rs], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 // SUBtract Unsigned
 void iSUBU(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -1687,6 +1703,9 @@ i64 doInstr(Allegrex *allegrex) {
                         break;
                     case SPECIAL::ADDU:
                         iADDU(allegrex, instr);
+                        break;
+                    case SPECIAL::SUB:
+                        iSUB(allegrex, instr);
                         break;
                     case SPECIAL::SUBU:
                         iSUBU(allegrex, instr);
@@ -1989,13 +2008,146 @@ i64 doInstr(Allegrex *allegrex) {
     return 1;
 }
 
+/**
+ * Loadcore Boot Information - Used to boot the system via Loadcore.
+ */
+struct SceLoadCoreBootInfo { 
+    /** 
+     * Pointer to a memory block which will be cleared in case the system initialization via 
+     * Loadcore fails.
+     */
+    u32 memBase; // 0
+    /** The size of the memory block to clear. */
+    u32 memSize; // 4
+    /** Number of modules already loaded during boot process. */
+    u32 loadedModules; // 8
+    /** Number of modules to boot. */
+    u32 numModules; // 12
+    /** The modules to boot. */
+    u32 modules; // 16
+     /** Unknown. */
+    i32 unk20; //20
+     /** Unknown. */
+    u8 unk24; //24
+    /** Reserved - padding. */
+    u8 reserved[3]; // ?
+    /** The number of protected (?)modules.*/
+    i32 numProtects; // 28
+    /** Pointer to the protected (?)modules. */
+    u32 protects; // 32
+    /** The ID of a protected info. */
+    u32 modProtId;
+    /** The ID of a module's arguments? */
+    u32 modArgProtId; // 40
+     /** Unknown. */
+    i32 unk44;
+     /** Unknown. */
+    i32 buildVersion;
+     /** Unknown. */
+    i32 unk52;
+    /** The path/name of a boot configuration file. */
+    u32 configFile; // 56
+    /** Unknown. */
+    i32 unk60;
+    /** Unknown. */
+    i32 unk64;
+    /** Unknown. */
+    i32 unk68;
+    /** Unknown. */
+    i32 unk72;
+    /** Unknown. */
+    i32 unk76;
+    /** Unknown. */
+    u32 unk80;
+    /** Unknown. */
+    u32 unk84;
+    /** Unknown. */
+    u32 unk98;
+    /** Unknown. */
+    u32 unk92;
+    /** Unknown. */
+    u32 unk96;
+    /** Unknown. */
+    u32 unk100;
+    /** Unknown. */
+    u32 unk104;
+    /** Unknown. */
+    u32 unk108;
+    /** Unknown. */
+    u32 unk112;
+    /** Unknown. */
+    u32 unk116;
+    /** Unknown. */
+    u32 unk120;
+    /** Unknown. */
+    u32 unk124;
+} __attribute__((packed)); //size = 128
+
+static_assert(sizeof(SceLoadCoreBootInfo) == 128);
+
+/**
+ * This structure is used to boot system modules during the initialization of Loadcore. It represents
+ * a module object with all the necessary information needed to boot it.
+ */
+struct SceLoadCoreBootModuleInfo {
+    /** The full path (including filename) of the module. */
+    u32 modPath; //0
+    /** The buffer with the entire file content. */
+    u32 modBuf; //4
+    /** The size of the module. */
+    u32 modSize; //8
+    /** Unknown. */
+    i32 unk12; //12
+    /** Attributes. */
+    u32 attr; //16
+    /** 
+     * Contains the API type of the module prior to the allocation of memory for the module. 
+     * Once memory is allocated, ::bootData contains the ID of that memory partition.
+     */
+    i32 bootData; //20
+    /** The size of the arguments passed to the module's entry function? */
+    u32 argSize; //24
+    /** The partition ID of the arguments passed to the module's entry function? */
+    u32 argPartId; //28
+} __attribute__((packed));
+
+static_assert(sizeof(SceLoadCoreBootModuleInfo) == 32);
+
+SceLoadCoreBootInfo *bootInfo = NULL;
+
+void printModules() {
+    if (bootInfo == NULL) return;
+
+    std::printf("Number of modules to boot: %u (loaded: %u)\n", bootInfo->numModules, bootInfo->loadedModules);
+
+    const auto modules = (SceLoadCoreBootModuleInfo *)memory::getMemoryPointer(bootInfo->modules);
+
+    for (u32 i = 0; i < bootInfo->numModules; i++) {
+        const auto mod = modules[i];
+
+        std::printf("Module: %s\n", memory::getMemoryPointer(mod.modBuf + 10));
+    }
+}
+
 void run(Allegrex *allegrex, i64 runCycles) {
     for (i64 i = 0; i < runCycles;) {
         if (allegrex->isHalted) return;
 
         cpc = allegrex->getPC();
 
-        if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0); // I still need this hack :()
+        if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0); // I still need this hack :(
+
+        if (cpc == 0x880629CC) {
+            std::puts("InitThreadEntry");
+
+            bootInfo = (SceLoadCoreBootInfo *)memory::getMemoryPointer(memory::read32(allegrex->get(Reg::A1) + 4));
+
+            printModules();
+        }
+
+        if (cpc == 0x880402EC) {
+            printModules();
+        }
 
         allegrex->advanceDelay();
 
