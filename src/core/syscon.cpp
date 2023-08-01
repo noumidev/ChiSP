@@ -43,10 +43,12 @@ enum class SysConReg {
     SPICLK  = 0x1C100064,
     PLLFREQ = 0x1C100068,
     AVCPOWER = 0x1C100070,
+    UNKNOWN1 = 0x1C100074,
     IOEN = 0x1C100078,
     GPIOEN = 0x1C10007C,
+    CONNECTSTATUS = 0x1C100080,
     FUSECONFIG = 0x1C100098,
-    UNKNOWN1 = 0x1C1000FC,
+    UNKNOWN2 = 0x1C1000FC,
 };
 
 enum class SysConSerialReg {
@@ -79,6 +81,7 @@ enum class SysConCommand {
     GET_POWER_STATUS = 0x46,
     CTRL_LED = 0x47,
     CTRL_LEPTON_POWER = 0x4B,
+    CTRL_WLAN_POWER = 0x4D,
     BATTERY_GET_STATUS_CAP = 0x61,
     BATTERY_GET_TEMP = 0x62,
     BATTERY_GET_VOLT = 0x63,
@@ -99,7 +102,7 @@ struct SysConRegs {
 
     u32 ramsize = TACHYON_VERSION, pllfreq = 333, spiclk;
 
-    u32 unknown[2];
+    u32 unknown[3];
 };
 
 SysConRegs regs[2];
@@ -246,6 +249,9 @@ void commonWrite(SysConCommand cmd) {
             break;
         case SysConCommand::CTRL_LEPTON_POWER:
             std::puts("[SysCon  ] Ctrl Lepton Power");
+            break;
+        case SysConCommand::CTRL_WLAN_POWER:
+            std::puts("[SysCon  ] Ctrl WLAN Power");
             break;
         default:
             std::printf("Unhandled SysCon common write 0x%02X\n", (u8)cmd);
@@ -409,6 +415,9 @@ void doCommand() {
         case SysConCommand::CTRL_LEPTON_POWER:
             commonWrite(SysConCommand::CTRL_LEPTON_POWER);
             break;
+        case SysConCommand::CTRL_WLAN_POWER:
+            commonWrite(SysConCommand::CTRL_WLAN_POWER);
+            break;
         case SysConCommand::BATTERY_GET_STATUS_CAP:
             cmdBatteryGetStatusCap();
             break;
@@ -497,6 +506,10 @@ u32 read(int cpuID, u32 addr) {
             std::puts("[SysCon  ] Read @ AVCPOWER");
 
             return avcpower;
+        case SysConReg::UNKNOWN1:
+            std::printf("[SysCon  ] Unknown read @ 0x%08X\n", addr);
+
+            return r.unknown[1];
         case SysConReg::PLLFREQ:
             std::puts("[SysCon  ] Read @ PLLFREQ");
 
@@ -509,14 +522,18 @@ u32 read(int cpuID, u32 addr) {
             std::puts("[SysCon  ] Read @ GPIOEN");
 
             return r.gpioen;
+        case SysConReg::CONNECTSTATUS:
+            std::puts("[SysCon  ] Read @ CONNECTSTATUS");
+
+            return 0;
         case SysConReg::FUSECONFIG:
             std::puts("[SysCon  ] Read @ FUSECONFIG");
 
             return FUSECONFIG;
-        case SysConReg::UNKNOWN1:
+        case SysConReg::UNKNOWN2:
             std::printf("[SysCon  ] Unknown read @ 0x%08X\n", addr);
 
-            return r.unknown[1];
+            return r.unknown[2];
         default:
             std::printf("[SysCon  ] Unhandled read @ 0x%08X\n", addr);
 
@@ -607,6 +624,11 @@ void write(int cpuID, u32 addr, u32 data) {
 
             avcpower = data;
             break;
+        case SysConReg::UNKNOWN1:
+            std::printf("[SysCon  ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            r.unknown[1] = data;
+            break;
         case SysConReg::IOEN:
             std::printf("[SysCon  ] Write @ IOEN = 0x%08X\n", data);
 
@@ -617,10 +639,13 @@ void write(int cpuID, u32 addr, u32 data) {
 
             r.gpioen = data;
             break;
-        case SysConReg::UNKNOWN1:
+        case SysConReg::CONNECTSTATUS:
+            std::printf("[SysCon  ] Write @ CONNECTSTATUS = 0x%08X\n", data);
+            break;
+        case SysConReg::UNKNOWN2:
             std::printf("[SysCon  ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
 
-            r.unknown[1] = data;
+            r.unknown[2] = data;
             break;
         default:
             std::printf("[SysCon  ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
