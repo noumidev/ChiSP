@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "../../common/types.hpp"
+#include "../common/types.hpp"
 
-namespace psp::umd::ata {
+namespace psp::ata {
 
 void init();
 

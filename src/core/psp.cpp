@@ -7,6 +7,7 @@
 
 #include <cstdio>
 
+#include "ata.hpp"
 #include "display.hpp"
 #include "hpremote.hpp"
 #include "i2c.hpp"
@@ -18,8 +19,7 @@
 #include "allegrex/allegrex.hpp"
 #include "allegrex/interpreter.hpp"
 #include "crypto/kirk.hpp"
-#include "umd/ata.hpp"
-#include "umd/umd.hpp"
+#include "crypto/spock.hpp"
 
 namespace psp {
 
@@ -41,10 +41,10 @@ void init(const char *bootPath, const char *nandPath) {
     hpremote::init();
     i2c::init();
     kirk::init();
+    spock::init();
     syscon::init();
     systime::init();
-    umd::init();
-    umd::ata::init();
+    ata::init();
 
     std::puts("[PSP     ] OK");
 }

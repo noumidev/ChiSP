@@ -15,6 +15,7 @@ add_subdirectory(cryptopp-cmake)
 # Set source and header files
 set(SOURCES
     src/main.cpp
+    src/core/ata.cpp
     src/core/ddr.cpp
     src/core/display.cpp
     src/core/gpio.cpp
@@ -32,13 +33,13 @@ set(SOURCES
     src/core/allegrex/fpu.cpp
     src/core/allegrex/interpreter.cpp
     src/core/crypto/kirk.cpp
-    src/core/umd/ata.cpp
-    src/core/umd/umd.cpp
+    src/core/crypto/spock.cpp
 )
 
 set(HEADERS
     src/common/file.hpp
     src/common/types.hpp
+    src/core/ata.hpp
     src/core/ddr.hpp
     src/core/display.hpp
     src/core/gpio.hpp
@@ -56,8 +57,7 @@ set(HEADERS
     src/core/allegrex/fpu.hpp
     src/core/allegrex/interpreter.hpp
     src/core/crypto/kirk.hpp
-    src/core/umd/ata.hpp
-    src/core/umd/umd.hpp
+    src/core/crypto/spock.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

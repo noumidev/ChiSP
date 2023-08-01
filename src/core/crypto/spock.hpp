@@ -7,7 +7,7 @@
 
 #include "../../common/types.hpp"
 
-namespace psp::umd {
+namespace psp::spock {
 
 void init();
 
