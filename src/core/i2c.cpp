@@ -33,10 +33,18 @@ u32 unknown[5];
 
 u64 idFinishTransfer;
 
+void checkInterrupt() {
+    if (irqstatus) {
+        intc::sendIRQ(intc::InterruptSource::I2C);
+    } else {
+        intc::clearIRQ(intc::InterruptSource::I2C);
+    }
+}
+
 void finishTransfer() {
     irqstatus |= 1;
 
-    intc::sendIRQ(intc::InterruptSource::I2C);
+    checkInterrupt();
 }
 
 void init() {
@@ -121,9 +129,7 @@ void write(u32 addr, u32 data) {
 
             irqstatus &= ~data;
 
-            if (!irqstatus) {
-                intc::clearIRQ(intc::InterruptSource::I2C);
-            }
+            checkInterrupt();
             break;
         case I2CReg::UNKNOWN4:
             std::printf("[I2C     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
