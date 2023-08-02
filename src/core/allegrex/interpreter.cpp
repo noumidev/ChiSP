@@ -128,6 +128,7 @@ enum class SPECIAL3 {
 };
 
 enum class BSHFL {
+    WSBW = 0x03,
     SEB = 0x10,
     BITREV = 0x14,
     SEH = 0x18,
@@ -1590,6 +1591,20 @@ void iXORI(Allegrex *allegrex, u32 instr) {
     }
 }
 
+/* Word Swap Bytes within Word */
+void iWSBW(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+    
+    const auto t = allegrex->get(rt);
+
+    allegrex->set(rd, (t >> 24) | (t << 24) | ((t & 0xFF0000) >> 8) | ((t & 0xFF00) << 8));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] WSBW %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 i64 doInstr(Allegrex *allegrex) {
     const auto instr = allegrex->read32(cpc);
 
@@ -1931,6 +1946,9 @@ i64 doInstr(Allegrex *allegrex) {
                             const auto shamt = getShamt(instr);
 
                             switch ((BSHFL)shamt) {
+                                case BSHFL::WSBW:
+                                    iWSBW(allegrex, instr);
+                                    break;
                                 case BSHFL::SEB:
                                     iSEB(allegrex, instr);
                                     break;
@@ -2129,6 +2147,8 @@ void printModules() {
     }
 }
 
+u32 sysconCmdSyncRet, kernelCreateThreadRet, idStorageLookupRet;
+
 void run(Allegrex *allegrex, i64 runCycles) {
     for (i64 i = 0; i < runCycles;) {
         if (allegrex->isHalted) return;
@@ -2146,7 +2166,81 @@ void run(Allegrex *allegrex, i64 runCycles) {
         }
 
         if (cpc == 0x880402EC) {
-            printModules();
+            //printModules();
+        }
+
+        if (cpc == 0x8803C290) {
+            std::printf("[PSP     ] [0x%08X] sceKernelCreateThread - Name: %s, entry*: 0x%08X\n", allegrex->get(Reg::RA), memory::getMemoryPointer(allegrex->get(Reg::A0)), allegrex->get(Reg::A1));
+
+            kernelCreateThreadRet = allegrex->get(Reg::RA);
+        }
+
+        if (cpc == kernelCreateThreadRet) {
+            std::printf("[PSP     ] sceKernelCreateThread result: %d\n", allegrex->get(Reg::V0));
+        }
+
+        if (cpc == 0x8803CC18) {
+            std::printf("[PSP     ] [0x%08X] sceKernelStartThread - ID: %u\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0));
+        }
+
+        if (cpc == 0x88030408) {
+            std::printf("[PSP     ] [0x%08X] sceKernelDelayThread - Delay: %u\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0));
+        }
+
+        if (cpc == 0x88030890) {
+            std::printf("[PSP     ] [0x%08X] sceKernelCreateSema - Name: %s\n", allegrex->get(Reg::RA), memory::getMemoryPointer(allegrex->get(Reg::A0)));
+        }
+
+        if (cpc == 0x880D3D04) {
+            std::puts("[PSP     ] _scePowerBatteryInit end");
+        }
+
+        if (cpc == 0x88087240) {
+            std::printf("[PSP     ] [0x%08X] sceSysconCmdSync - Packet*: 0x%08X, noWait: %d\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0), allegrex->get(Reg::A1));
+
+            sysconCmdSyncRet = allegrex->get(Reg::RA);
+        } 
+
+        if (cpc == sysconCmdSyncRet) {
+            std::printf("[PSP     ] sceSysconCmdSync result: %d\n", allegrex->get(Reg::V0));
+        }
+
+        if (cpc == 0x8807D1B4) {
+            std::printf("[PSP     ] sceIdStorageLookup - ID: %u, offset: %u, buf*: 0x%08X, len: 0x%X\n", allegrex->get(Reg::A0), allegrex->get(Reg::A1), allegrex->get(Reg::A2), allegrex->get(Reg::A3));
+
+            //ENABLE_DISASM = true;
+
+            idStorageLookupRet = allegrex->get(Reg::RA);
+        }
+
+        if (cpc == idStorageLookupRet) {
+            std::puts("[PSP     ] sceIdStorageLookup end");
+        }
+
+        if (cpc == 0x8807368C) {
+            std::printf("[PSP     ] [0x%08X] sceNandLock - Mode: %u\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0));
+        }
+
+        if (cpc == 0x8807370C) {
+            std::printf("[PSP     ] [0x%08X] sceNandUnlock\n", allegrex->get(Reg::RA));
+        }
+
+        if (cpc == 0x8800AB74 || cpc == 0x8800b550) {
+            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
+
+            std::printf("[PSP     ] %s", msgPtr);
+        }
+
+        if (cpc == 0x8802AA20) { // Kernel printf hook
+            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
+            const auto size = allegrex->get(Reg::V0);
+
+            char msg[size + 1];
+
+            msg[size] = 0;
+            std::memcpy(msg, msgPtr, size);
+
+            std::printf("[PSP     ] %s\n", msg);
         }
 
         allegrex->advanceDelay();
