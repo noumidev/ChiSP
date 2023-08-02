@@ -171,6 +171,11 @@ void write(u32 addr, u32 data) {
 
             startCommand();
             break;
+        case SPOCKReg::UNKNOWN1:
+            std::printf("[SPOCK   ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            unknown[1] = data;
+            break;
         case SPOCKReg::IRQCLEAR:
             std::printf("[SPOCK   ] Write @ IRQCLEAR = 0x%08X\n", data);
 
