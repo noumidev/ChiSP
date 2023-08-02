@@ -185,7 +185,7 @@ void commonRead(SysConCommand cmd) {
         case SysConCommand::GET_KERNEL_DIGITAL_KEY:
             std::puts("[SysCon  ] Get Kernel Digital Key");
 
-            data = 0x4000; // ??
+            data = 0x02004000; // ??
             break;
         case SysConCommand::READ_CLOCK:
             std::puts("[SysCon  ] Read Clock");
