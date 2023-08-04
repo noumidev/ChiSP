@@ -309,7 +309,7 @@ void write(u32 addr, u32 data) {
         case NANDReg::DMAINTR:
             std::printf("[NAND    ] Write @ DMAINTR = 0x%08X\n", data);
 
-            dmaintr = (data & 0xF00) | ((dmaintr & 3) & ~(data & 3));
+            dmaintr = (data & 0xF00) | (dmaintr & (~data & 3));
 
             checkInterrupt();
             break;
