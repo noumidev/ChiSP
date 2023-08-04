@@ -8,3 +8,6 @@
  - Reads IPL from NAND, decrypts IPL with KIRK
  - Loads and runs all IPL stages
  - Loads 60 kernel modules (out of 69), stuck in impose.prx
+
+# Dependencies
+ - Crypto++
