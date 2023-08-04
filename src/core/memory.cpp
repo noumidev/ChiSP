@@ -13,6 +13,7 @@
 #include "ata.hpp"
 #include "ddr.hpp"
 #include "display.hpp"
+#include "ge.hpp"
 #include "gpio.hpp"
 #include "hpremote.hpp"
 #include "intc.hpp"
@@ -182,9 +183,7 @@ u32 read32(u32 addr) {
 
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
-        std::printf("[GE      ] Unhandled read @ 0x%08X\n", addr);
-
-        return 0;
+        return ge::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::ATA0, (u64)MemorySize::ATA0)) {
         return ata::readATA0(addr);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
@@ -334,7 +333,7 @@ void write32(u32 addr, u32 data) {
     } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
         std::printf("[WLAN    ] Unhandled write32 @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
-        std::printf("[GE      ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
+        return ge::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::ATA0, (u64)MemorySize::ATA0)) {
         return ata::writeATA0(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {

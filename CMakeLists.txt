@@ -18,6 +18,7 @@ set(SOURCES
     src/core/ata.cpp
     src/core/ddr.cpp
     src/core/display.cpp
+    src/core/ge.cpp
     src/core/gpio.cpp
     src/core/hpremote.cpp
     src/core/intc.cpp
@@ -42,6 +43,7 @@ set(HEADERS
     src/core/ata.hpp
     src/core/ddr.hpp
     src/core/display.hpp
+    src/core/ge.hpp
     src/core/gpio.hpp
     src/core/hpremote.hpp
     src/core/intc.hpp
