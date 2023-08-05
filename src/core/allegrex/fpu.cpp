@@ -22,10 +22,16 @@ enum class SingleOpcode {
     SQRT = 0x04,
     MOV = 0x06,
     TRUNCW = 0x0D,
+    C = 0x30,
 };
 
 const char *fpuName[] = {
     "FPU:CPU ", "FPU:ME  ",
+};
+
+const char *condNames[] = {
+    "F" , "UN"  , "EQ" , "UEQ", "OLT", "ULT", "OLE", "ULE",
+    "SF", "NGLE", "SEQ", "NGL", "LT" , "NGE", "LE" , "NGT",
 };
 
 u32 getFd(u32 instr) {
@@ -86,6 +92,33 @@ void FPU::iADD(u32 instr) {
     if (ENABLE_DISASM) {
         std::printf("[%s] ADD.S F%u, F%u, F%u; F%u = %f\n", fpuName[cpuID], fd, fs, ft, fd, getF32(fd));
     }
+}
+
+/* Compare */
+void FPU::iC(u32 instr) {
+    const auto cond = instr & 0xF;
+    const auto fs = getFs(instr);
+    const auto ft = getFt(instr);
+
+    bool isLess, isEqual, isUnordered;
+
+    const auto s = getF32(fs);
+    const auto t = getF32(ft);
+
+    if (std::isnan(s) || std::isnan(t)) {
+        isLess = isEqual = false;
+        isUnordered = true;
+
+        // TODO: throw exception on signaling NaNs
+    } else {
+        isLess = s < t;
+        isEqual = s == t;
+        isUnordered = false;
+    }
+
+    cpcond = ((cond & (1 << 2)) && isLess) || ((cond & (1 << 1)) && isEqual) || ((cond & (1 << 0)) && isUnordered);
+
+    std::printf("[%s] C.%s.S F%u, F%u; F%u = %f, F%u = %f, CPCOND: %d\n", fpuName[cpuID], condNames[cond], fs, ft, fs, s, ft, t, cpcond);
 }
 
 // ConVert To Single
@@ -201,6 +234,10 @@ void FPU::doSingle(u32 instr) {
             iTRUNCW(instr);
             break;
         default:
+            if (opcode >= (u32)SingleOpcode::C) {
+                return iC(instr);
+            }
+
             std::printf("Unhandled %s Single instruction 0x%02X (0x%08X)\n", fpuName[cpuID], opcode, instr);
 
             exit(0);

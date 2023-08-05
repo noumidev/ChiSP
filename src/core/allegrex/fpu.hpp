@@ -23,6 +23,8 @@ struct FPU {
 
     void doSingle(u32 instr);
     void doWord(u32 instr);
+
+    bool cpcond;
 private:
     int cpuID;
 
@@ -35,6 +37,7 @@ private:
     // FPU instructions
     // Single
     void iADD(u32 instr);
+    void iC(u32 instr);
     void iDIV(u32 instr);
     void iMOV(u32 instr);
     void iMUL(u32 instr);
