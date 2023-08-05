@@ -9,6 +9,7 @@
 
 #include "ata.hpp"
 #include "display.hpp"
+#include "dmacplus.hpp"
 #include "ge.hpp"
 #include "hpremote.hpp"
 #include "i2c.hpp"
@@ -39,6 +40,7 @@ void init(const char *bootPath, const char *nandPath) {
     me.isHalted = true;
 
     display::init();
+    dmacplus::init();
     ge::init();
     hpremote::init();
     i2c::init();
