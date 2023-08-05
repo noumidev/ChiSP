@@ -17,6 +17,7 @@ enum class InterruptSource {
     SysTime = 19,
     NAND = 20,
     KIRK = 24,
+    GE = 25,
     VSYNC = 30,
     HPRemote = 36,
 };

@@ -51,7 +51,7 @@ u32 read(int cpuID, u32 addr) {
         case INTCRegs::OTHERFLAG1:
         case INTCRegs::OTHERFLAG2:
             {
-                const auto idx = (addr >> 4) & 3;
+                //const auto idx = (addr >> 4) & 3;
 
                 //std::printf("[INTC    ] Read @ OTHERFLAG%u\n", idx);
 
