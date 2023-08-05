@@ -9,6 +9,7 @@
 
 #include "ata.hpp"
 #include "display.hpp"
+#include "ge.hpp"
 #include "hpremote.hpp"
 #include "i2c.hpp"
 #include "memory.hpp"
@@ -38,6 +39,7 @@ void init(const char *bootPath, const char *nandPath) {
     me.isHalted = true;
 
     display::init();
+    ge::init();
     hpremote::init();
     i2c::init();
     kirk::init();
