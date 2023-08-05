@@ -180,6 +180,7 @@ enum class KIRKCommand {
     DECRYPT_AES_KEYSTORE = 0x07,
     GENERATE_SHA1 = 0x0B,
     INIT = 0x0F,
+    VERIFY_CERTIFICATE = 0x12,
 };
 
 enum STATUS {
@@ -380,6 +381,9 @@ void doCommand() {
             break;
         case KIRKCommand::INIT:
             std::puts("[KIRK    ] Init");
+            break;
+        case KIRKCommand::VERIFY_CERTIFICATE:
+            std::puts("[KIRK    ] Verify Certificate");
             break;
         default:
             std::printf("Unhandled KIRK command 0x%02X\n", cmd);
