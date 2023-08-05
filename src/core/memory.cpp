@@ -13,6 +13,7 @@
 #include "ata.hpp"
 #include "ddr.hpp"
 #include "display.hpp"
+#include "dmacplus.hpp"
 #include "ge.hpp"
 #include "gpio.hpp"
 #include "hpremote.hpp"
@@ -167,9 +168,7 @@ u32 read32(u32 addr) {
     } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
         return systime::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::DMACplus, (u64)MemorySize::DMACplus)) {
-        std::printf("[DMACplus] Unhandled read @ 0x%08X\n", addr);
-
-        return 0;
+        return dmacplus::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
@@ -323,7 +322,7 @@ void write32(u32 addr, u32 data) {
     } else if (inRange(addr, (u64)MemoryBase::SysTime, (u64)MemorySize::SysTime)) {
         return systime::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DMACplus, (u64)MemorySize::DMACplus)) {
-        std::printf("[DMACplus] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
+        return dmacplus::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {

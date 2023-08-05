@@ -18,6 +18,7 @@ set(SOURCES
     src/core/ata.cpp
     src/core/ddr.cpp
     src/core/display.cpp
+    src/core/dmacplus.cpp
     src/core/ge.cpp
     src/core/gpio.cpp
     src/core/hpremote.cpp
@@ -43,6 +44,7 @@ set(HEADERS
     src/core/ata.hpp
     src/core/ddr.hpp
     src/core/display.hpp
+    src/core/dmacplus.hpp
     src/core/ge.hpp
     src/core/gpio.hpp
     src/core/hpremote.hpp
