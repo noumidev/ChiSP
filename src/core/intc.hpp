@@ -16,6 +16,7 @@ enum class InterruptSource {
     I2C  = 12,
     SysTime = 19,
     NAND = 20,
+    DMACplus = 21,
     KIRK = 24,
     GE = 25,
     VSYNC = 30,
