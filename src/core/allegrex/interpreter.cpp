@@ -148,12 +148,20 @@ enum class COPOpcode {
     CFC = 0x02,
     MTC = 0x04,
     CTC = 0x06,
+    BC  = 0x08,
     CO  = 0x10,
     W = 0x14,
 };
 
 enum class COP0Opcode {
     ERET = 0x18,
+};
+
+enum class BC {
+    BCF  = 0,
+    BCT  = 1,
+    BCFL = 2,
+    BCTL = 3,
 };
 
 u32 cpc; // Current program counter
@@ -289,6 +297,98 @@ void iANDI(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] ANDI %s, %s, 0x%X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
+    }
+}
+
+// Branch on Coprocessor False
+void iBCF(Allegrex *allegrex, int copN, u32 instr) {
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+    const auto target = allegrex->getPC() + offset;
+
+    bool cpcond;
+    switch (copN) {
+        case 1:
+            cpcond = allegrex->fpu.cpcond;
+            break;
+        default:
+            std::printf("Unhandled %s BCF coprocessor %d\n", allegrex->getTypeName(), copN);
+
+            exit(0);
+    }
+
+    allegrex->doBranch(target, !cpcond, Reg::R0, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BC%dF 0x%08X; CPCOND%d = %d\n", allegrex->getTypeName(), cpc, copN, target, copN, cpcond);
+    }
+}
+
+// Branch on Coprocessor False Likely
+void iBCFL(Allegrex *allegrex, int copN, u32 instr) {
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+    const auto target = allegrex->getPC() + offset;
+
+    bool cpcond;
+    switch (copN) {
+        case 1:
+            cpcond = allegrex->fpu.cpcond;
+            break;
+        default:
+            std::printf("Unhandled %s BCFL coprocessor %d\n", allegrex->getTypeName(), copN);
+
+            exit(0);
+    }
+
+    allegrex->doBranch(target, !cpcond, Reg::R0, true);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BC%dFL 0x%08X; CPCOND%d = %d\n", allegrex->getTypeName(), cpc, copN, target, copN, cpcond);
+    }
+}
+
+// Branch on Coprocessor True
+void iBCT(Allegrex *allegrex, int copN, u32 instr) {
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+    const auto target = allegrex->getPC() + offset;
+
+    bool cpcond;
+    switch (copN) {
+        case 1:
+            cpcond = allegrex->fpu.cpcond;
+            break;
+        default:
+            std::printf("Unhandled %s BCT coprocessor %d\n", allegrex->getTypeName(), copN);
+
+            exit(0);
+    }
+
+    allegrex->doBranch(target, cpcond, Reg::R0, false);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BC%dT 0x%08X; CPCOND%d = %d\n", allegrex->getTypeName(), cpc, copN, target, copN, cpcond);
+    }
+}
+
+// Branch on Coprocessor True Likely
+void iBCTL(Allegrex *allegrex, int copN, u32 instr) {
+    const auto offset = (i32)(i16)getImm(instr) << 2;
+    const auto target = allegrex->getPC() + offset;
+
+    bool cpcond;
+    switch (copN) {
+        case 1:
+            cpcond = allegrex->fpu.cpcond;
+            break;
+        default:
+            std::printf("Unhandled %s BCTL coprocessor %d\n", allegrex->getTypeName(), copN);
+
+            exit(0);
+    }
+
+    allegrex->doBranch(target, cpcond, Reg::R0, true);
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] BC%dTL 0x%08X; CPCOND%d = %d\n", allegrex->getTypeName(), cpc, copN, target, copN, cpcond);
     }
 }
 
@@ -1884,6 +1984,30 @@ i64 doInstr(Allegrex *allegrex) {
                     case COPOpcode::CTC:
                         iCTC(allegrex, 1, instr);
                         break;
+                    case COPOpcode::BC:
+                        {
+                            const auto rt = getRt(instr);
+
+                            switch ((BC)rt) {
+                                case BC::BCF:
+                                    iBCF(allegrex, 1, instr);
+                                    break;
+                                case BC::BCT:
+                                    iBCT(allegrex, 1, instr);
+                                    break;
+                                case BC::BCFL:
+                                    iBCFL(allegrex, 1, instr);
+                                    break;
+                                case BC::BCTL:
+                                    iBCTL(allegrex, 1, instr);
+                                    break;
+                                default:
+                                    std::printf("Unhandled %s COP1 branch instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rt, instr, cpc);
+
+                                    exit(0);
+                            }
+                        }
+                        break;
                     case COPOpcode::CO: // Actually Single instructions
                         allegrex->fpu.doSingle(instr);
                         break;
@@ -2147,7 +2271,7 @@ void printModules() {
     }
 }
 
-u32 sysconCmdSyncRet, kernelCreateThreadRet, idStorageLookupRet;
+u32 sysconCmdSyncRet, idStorageLookupRet;
 
 void run(Allegrex *allegrex, i64 runCycles) {
     for (i64 i = 0; i < runCycles;) {
@@ -2169,30 +2293,12 @@ void run(Allegrex *allegrex, i64 runCycles) {
             //printModules();
         }
 
-        if (cpc == 0x8803C290) {
-            std::printf("[PSP     ] [0x%08X] sceKernelCreateThread - Name: %s, entry*: 0x%08X\n", allegrex->get(Reg::RA), memory::getMemoryPointer(allegrex->get(Reg::A0)), allegrex->get(Reg::A1));
-
-            kernelCreateThreadRet = allegrex->get(Reg::RA);
-        }
-
-        if (cpc == kernelCreateThreadRet) {
-            std::printf("[PSP     ] sceKernelCreateThread result: %d\n", allegrex->get(Reg::V0));
-        }
-
-        if (cpc == 0x8803CC18) {
-            std::printf("[PSP     ] [0x%08X] sceKernelStartThread - ID: %u\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0));
-        }
-
         if (cpc == 0x88030408) {
             std::printf("[PSP     ] [0x%08X] sceKernelDelayThread - Delay: %u\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0));
         }
 
         if (cpc == 0x88030890) {
             std::printf("[PSP     ] [0x%08X] sceKernelCreateSema - Name: %s\n", allegrex->get(Reg::RA), memory::getMemoryPointer(allegrex->get(Reg::A0)));
-        }
-
-        if (cpc == 0x880D3D04) {
-            std::puts("[PSP     ] _scePowerBatteryInit end");
         }
 
         if (cpc == 0x88087240) {
