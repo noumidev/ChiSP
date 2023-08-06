@@ -393,6 +393,34 @@ void write32(u32 addr, u32 data) {
     }
 }
 
+void read128(u32 addr, u8 *data) {
+    assert(!(addr & 0xF));
+
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
+    if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(data, &dram[addr & ((u32)MemorySize::DRAM - 1)], 4 * sizeof(u32));
+    } else {
+        std::printf("Unhandled read128 @ 0x%08X\n", addr);
+
+        exit(0);
+    }
+}
+
+void write128(u32 addr, u8 *data) {
+    assert(!(addr & 0xF));
+
+    addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
+
+    if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+        std::memcpy(&dram[addr & ((u32)MemorySize::DRAM - 1)], data, 4 * sizeof(u32));
+    } else {
+        std::printf("Unhandled write128 @ 0x%08X = 0x%08X%08X%08X%08X\n", addr, *(u32 *)&data[0], *(u32 *)&data[4], *(u32 *)&data[8], *(u32 *)&data[12]);
+
+        exit(0);
+    }
+}
+
 u8 meRead8(u32 addr) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 

@@ -92,6 +92,9 @@ void write8 (u32 addr, u8  data);
 void write16(u32 addr, u16 data);
 void write32(u32 addr, u32 data);
 
+void read128 (u32 addr, u8 *data);
+void write128(u32 addr, u8 *data);
+
 u8  meRead8 (u32 addr);
 u16 meRead16(u32 addr);
 u32 meRead32(u32 addr);
