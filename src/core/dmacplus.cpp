@@ -48,6 +48,10 @@ enum ChannelStatus {
     DDR_REQUIRED = 1 << 8,
 };
 
+enum FRAMEBUFCONFIG {
+    ENABLE_SCANOUT = 1 << 0,
+};
+
 const char *chnNames[] = {
     "Sc2Me", "Me2Sc", "Sc128",
 };
@@ -63,7 +67,7 @@ u32 csc[17];
 // Sc2Me, Me2Sc, Sc128
 Channel channels[3];
 
-u64 idFinishTransfer;
+u64 idFinishTransfer, idFinishScanout;
 
 void checkInterrupt() {
     if (irqstatus & irqen) {
@@ -89,6 +93,12 @@ void finishTransfer(int chnID) {
     if (chn.triggerIRQ) {
         sendIRQ(chnID + 2); // Skip LCDC and AVC channels
     }
+}
+
+void finishScanout() {
+    std::puts("[DMACplus] LCDC end");
+
+    sendIRQ(0);
 }
 
 void doTransfer(int chnID) {
@@ -128,6 +138,7 @@ void doTransfer(int chnID) {
 
 void init() {
     idFinishTransfer = scheduler::registerEvent([](int chnID) {finishTransfer(chnID);});
+    idFinishScanout  = scheduler::registerEvent([](int) {finishScanout();});
 
     irqen = 0x1F; // All IRQs enabled?
 }
@@ -323,6 +334,12 @@ void write(u32 addr, u32 data) {
             std::printf("[DMACplus] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
 
             exit(0);
+    }
+}
+
+void doScanout() {
+    if (framebufconfig & FRAMEBUFCONFIG::ENABLE_SCANOUT) {
+        //scheduler::addEvent(idFinishScanout, 0, 480 * 272 / 4);
     }
 }
 

@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstdio>
 
+#include "dmacplus.hpp"
 #include "intc.hpp"
 #include "scheduler.hpp"
 
@@ -22,6 +23,8 @@ void vsync() {
     intc::sendIRQ(intc::InterruptSource::VSYNC);
 
     scheduler::addEvent(idVsync, 0, VSYNC_CYCLES);
+
+    dmacplus::doScanout();
 }
 
 void init() {
