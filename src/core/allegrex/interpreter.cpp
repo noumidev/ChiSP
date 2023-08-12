@@ -1661,8 +1661,27 @@ void iSYSCALL(Allegrex *allegrex, u32 instr) {
         std::printf("[%s] [0x%08X] SYSCALL\n", allegrex->getTypeName(), cpc);
     }
 
+    const auto code = (instr >> 6) & 0xFFFFF;
+
     allegrex->raiseException(Exception::SystemCall);
-    allegrex->cop0.setSyscallCode((instr >> 6) & 0xFFFFF);
+    allegrex->cop0.setSyscallCode(code);
+
+    switch (code) {
+        case 0x2022:
+            std::printf("[%s] [0x%08X] sceKernelSignalSema - Sema ID: %u, signal: %d\n", allegrex->getTypeName(), allegrex->get(Reg::RA), allegrex->get(Reg::A0), allegrex->get(Reg::A1));
+            break;
+        case 0x208F:
+            std::printf("[%s] [0x%08X] sceIoOpen - File: %s\n", allegrex->getTypeName(), allegrex->get(Reg::RA), memory::getMemoryPointer(allegrex->get(Reg::A0)));
+            break;
+        case 0x20D2:
+            std::printf("[%s] [0x%08X] sceKernelLoadModule - Module: %s\n", allegrex->getTypeName(), allegrex->get(Reg::RA), memory::getMemoryPointer(allegrex->get(Reg::A0)));
+            break;
+        case 0x20D3:
+            std::printf("[%s] [0x%08X] sceKernelLoadModuleByID - Module ID: 0x%X\n", allegrex->getTypeName(), allegrex->get(Reg::RA), allegrex->get(Reg::A0));
+            break;
+        default:
+            break;
+    }
 }
 
 // XOR
@@ -2314,8 +2333,6 @@ void run(Allegrex *allegrex, i64 runCycles) {
         if (cpc == 0x8807D1B4) {
             std::printf("[PSP     ] sceIdStorageLookup - ID: %u, offset: %u, buf*: 0x%08X, len: 0x%X\n", allegrex->get(Reg::A0), allegrex->get(Reg::A1), allegrex->get(Reg::A2), allegrex->get(Reg::A3));
 
-            //ENABLE_DISASM = true;
-
             idStorageLookupRet = allegrex->get(Reg::RA);
         }
 
@@ -2331,22 +2348,16 @@ void run(Allegrex *allegrex, i64 runCycles) {
             std::printf("[PSP     ] [0x%08X] sceNandUnlock\n", allegrex->get(Reg::RA));
         }
 
-        if (cpc == 0x8800AB74 || cpc == 0x8800b550) {
-            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
+        if (cpc == 0x8800B550) {
+            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A0));
 
-            std::printf("[PSP     ] %s", msgPtr);
+            std::printf("[PSPDEBUG] %s", msgPtr);
         }
 
-        if (cpc == 0x8802AA20) { // Kernel printf hook
-            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A1));
-            const auto size = allegrex->get(Reg::V0);
+        if (cpc == 0x8802C3B0) { // Kernel printf hook
+            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A0));
 
-            char msg[size + 1];
-
-            msg[size] = 0;
-            std::memcpy(msg, msgPtr, size);
-
-            std::printf("[PSP     ] %s\n", msg);
+            std::printf("[PSPDEBUG] %s\n", msgPtr);
         }
 
         allegrex->advanceDelay();
