@@ -13,57 +13,57 @@
 namespace psp::intc {
 
 enum class INTCRegs {
-    FLAG0 = 0x1C300000,
-    OTHERFLAG0 = 0x1C300004,
-    MASK0 = 0x1C300008,
-    FLAG1 = 0x1C300010,
-    OTHERFLAG1 = 0x1C300014,
-    MASK1 = 0x1C300018,
-    FLAG2 = 0x1C300020,
-    OTHERFLAG2 = 0x1C300024,
-    MASK2 = 0x1C300028,
+    UNMASKEDFLAGS1 = 0x1C300000,
+    FLAGS1 = 0x1C300004,
+    MASK1  = 0x1C300008,
+    UNMASKEDFLAGS2 = 0x1C300010,
+    FLAGS2 = 0x1C300014,
+    MASK2  = 0x1C300018,
+    UNMASKEDFLAGS3 = 0x1C300020,
+    FLAGS3 = 0x1C300024,
+    MASK3  = 0x1C300028,
 };
 
-u32 flag[2][3], mask[2][3];
+u32 unmaskedflags[2][3], flags[2][3], mask[2][3];
 
 void checkInterrupt() {
-    setIRQPending((flag[0][0] & mask[0][0]) | (flag[0][1] & mask[0][1]) | (flag[0][2] & mask[0][2]));
+    setIRQPending((unmaskedflags[0][0] & mask[0][0]) | (unmaskedflags[0][1] & mask[0][1]) | (unmaskedflags[0][2] & mask[0][2]));
 }
 
 void meCheckInterrupt() {
-    setIRQPending((flag[1][0] & mask[1][0]) | (flag[1][1] & mask[1][1]) | (flag[1][2] & mask[1][2]));
+    setIRQPending((unmaskedflags[1][0] & mask[1][0]) | (unmaskedflags[1][1] & mask[1][1]) | (unmaskedflags[1][2] & mask[1][2]));
 }
 
 u32 read(int cpuID, u32 addr) {
     switch ((INTCRegs)addr) {
-        case INTCRegs::FLAG0:
-        case INTCRegs::FLAG1:
-        case INTCRegs::FLAG2:
+        case INTCRegs::UNMASKEDFLAGS1:
+        case INTCRegs::UNMASKEDFLAGS2:
+        case INTCRegs::UNMASKEDFLAGS3:
             {
                 const auto idx = (addr >> 4) & 3;
 
-                std::printf("[INTC    ] Read @ FLAG%u\n", idx);
+                std::printf("[INTC    ] Read @ UNMASKEDFLAGS%u\n", idx + 1);
 
-                return flag[cpuID][idx];
+                return unmaskedflags[cpuID][idx];
             }
             break;
-        case INTCRegs::OTHERFLAG0:
-        case INTCRegs::OTHERFLAG1:
-        case INTCRegs::OTHERFLAG2:
-            {
-                //const auto idx = (addr >> 4) & 3;
-
-                //std::printf("[INTC    ] Read @ OTHERFLAG%u\n", idx);
-
-                return 0;
-            }
-        case INTCRegs::MASK0:
-        case INTCRegs::MASK1:
-        case INTCRegs::MASK2:
+        case INTCRegs::FLAGS1:
+        case INTCRegs::FLAGS2:
+        case INTCRegs::FLAGS3:
             {
                 const auto idx = (addr >> 4) & 3;
 
-                std::printf("[INTC    ] Read @ MASK%u\n", idx);
+                //std::printf("[INTC    ] Read @ FLAGS%u\n", idx + 1);
+
+                return flags[cpuID][idx];
+            }
+        case INTCRegs::MASK1:
+        case INTCRegs::MASK2:
+        case INTCRegs::MASK3:
+            {
+                const auto idx = (addr >> 4) & 3;
+
+                std::printf("[INTC    ] Read @ MASK%u\n", idx + 1);
 
                 return mask[cpuID][idx];
             }
@@ -77,24 +77,25 @@ u32 read(int cpuID, u32 addr) {
 
 void write(int cpuID, u32 addr, u32 data) {
     switch ((INTCRegs)addr) {
-        case INTCRegs::FLAG0:
-        case INTCRegs::FLAG1:
-        case INTCRegs::FLAG2:
+        case INTCRegs::UNMASKEDFLAGS1:
+        case INTCRegs::UNMASKEDFLAGS2:
+        case INTCRegs::UNMASKEDFLAGS3:
             {
                 const auto idx = (addr >> 4) & 3;
 
-                std::printf("[INTC    ] Write @ FLAG%u = 0x%08X\n", idx, data);
+                std::printf("[INTC    ] Write @ UNMASKEDFLAGS%u = 0x%08X\n", idx + 1, data);
 
-                flag[cpuID][idx] &= ~data;
+                unmaskedflags[cpuID][idx] &= ~data;
+                flags[cpuID][idx] &= ~data;
             }
             break;
-        case INTCRegs::MASK0:
         case INTCRegs::MASK1:
         case INTCRegs::MASK2:
+        case INTCRegs::MASK3:
             {
                 const auto idx = (addr >> 4) & 3;
 
-                std::printf("[INTC    ] Write @ MASK%u = 0x%08X\n", idx, data);
+                std::printf("[INTC    ] Write @ MASK%u = 0x%08X\n", idx + 1, data);
 
                 mask[cpuID][idx] = data;
             }
@@ -118,23 +119,28 @@ void sendIRQ(InterruptSource irqSource) {
     std::printf("[INTC    ] Requesting interrupt %u\n", irqNum);
 
     // Get the right flag/mask regs
-    u32 *irqFlag, *irqMask;
+    u32 *irqUnmaskedflags, *irqFlags, *irqMask;
     if (irqNum < 32) {
-        irqFlag = &flag[0][0];
-        irqMask = &mask[0][0];
+        irqUnmaskedflags = &unmaskedflags[0][0];
+        irqFlags = &flags[0][0];
+        irqMask  = &mask [0][0];
     } else if (irqNum < 64) {
-        irqFlag = &flag[0][1];
-        irqMask = &mask[0][1];
+        irqUnmaskedflags = &unmaskedflags[0][1];
+        irqFlags = &flags[0][1];
+        irqMask  = &mask [0][1];
     } else {
-        irqFlag = &flag[0][2];
-        irqMask = &mask[0][2];
+        irqUnmaskedflags = &unmaskedflags[0][2];
+        irqFlags = &flags[0][2];
+        irqMask  = &mask [0][2];
     }
 
     // Mask number to 0-31 range
     irqNum &= 0x1F;
 
+    *irqFlags |= 1 << irqNum;
+
     if (*irqMask & (1 << irqNum)) {
-        *irqFlag |= 1 << irqNum;
+        *irqUnmaskedflags |= 1 << irqNum;
 
         setIRQPending(true); // Always pending if we get here
     }
@@ -146,23 +152,28 @@ void meSendIRQ(InterruptSource irqSource) {
     std::printf("[INTC    ] Requesting ME interrupt %u\n", irqNum);
 
     // Get the right flag/mask regs
-    u32 *irqFlag, *irqMask;
+    u32 *irqUnmaskedflags, *irqFlags, *irqMask;
     if (irqNum < 32) {
-        irqFlag = &flag[1][0];
-        irqMask = &mask[1][0];
+        irqUnmaskedflags = &unmaskedflags[1][0];
+        irqFlags = &flags[1][0];
+        irqMask  = &mask [1][0];
     } else if (irqNum < 64) {
-        irqFlag = &flag[1][1];
-        irqMask = &mask[1][1];
+        irqUnmaskedflags = &unmaskedflags[1][1];
+        irqFlags = &flags[1][1];
+        irqMask  = &mask [1][1];
     } else {
-        irqFlag = &flag[1][2];
-        irqMask = &mask[1][2];
+        irqUnmaskedflags = &unmaskedflags[1][2];
+        irqFlags = &flags[1][2];
+        irqMask  = &mask [1][2];
     }
 
     // Mask number to 0-31 range
     irqNum &= 0x1F;
 
+    *irqFlags |= 1 << irqNum;
+
     if (*irqMask & (1 << irqNum)) {
-        *irqFlag |= 1 << irqNum;
+        *irqUnmaskedflags |= 1 << irqNum;
 
         meSetIRQPending(true); // Always pending if we get here
     }
@@ -174,19 +185,23 @@ void clearIRQ(InterruptSource irqSource) {
     std::printf("[INTC    ] Clearing interrupt %u\n", irqNum);
 
     // Get the right flag reg
-    u32 *irqFlag;
+    u32 *irqUnmaskedflags, *irqFlags;
     if (irqNum < 32) {
-        irqFlag = &flag[0][0];
+        irqUnmaskedflags = &unmaskedflags[0][0];
+        irqFlags = &flags[0][0];
     } else if (irqNum < 64) {
-        irqFlag = &flag[0][1];
+        irqUnmaskedflags = &unmaskedflags[0][1];
+        irqFlags = &flags[0][1];
     } else {
-        irqFlag = &flag[0][2];
+        irqUnmaskedflags = &unmaskedflags[0][1];
+        irqFlags = &flags[0][1];
     }
 
     // Mask number to 0-31 range
     irqNum &= 0x1F;
 
-    *irqFlag &= ~(1 << irqNum);
+    *irqUnmaskedflags &= ~(1 << irqNum);
+    *irqFlags &= ~(1 << irqNum);
 
     checkInterrupt();
 }
