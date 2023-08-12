@@ -69,6 +69,11 @@ enum DMACTRL {
     SPARE_DATA_EN = 1 << 9,
 };
 
+enum DMAINTR {
+    READ_FINISHED  = 1 << 0,
+    WRITE_FINISHED = 1 << 1,
+};
+
 std::array<u8, NAND_SIZE> nand;
 std::array<u8, PAGE_SIZE_ECC> nandBuffer;
 
@@ -99,7 +104,7 @@ u32 getSerialData() {
 }
 
 void checkInterrupt() {
-    if (((dmaintr >> 8) & 3) & (dmaintr & 3)) {
+    if (dmaintr & 3) {
         intc::sendIRQ(intc::InterruptSource::NAND);
     } else {
         intc::clearIRQ(intc::InterruptSource::NAND);
@@ -107,7 +112,7 @@ void checkInterrupt() {
 }
 
 void sendIRQ(int type) {
-    dmaintr |= type;
+    dmaintr |= 0x300 | type; // All operations appear to set bits 8 and 9
 
     checkInterrupt();
 }
@@ -131,7 +136,7 @@ void finishTransfer() {
     dmactrl &= ~DMACTRL::DMA_BUSY; // Clear DMA busy bit
     deviceStatus |= (u32)NANDStatus::DEVICE_READY;
 
-    sendIRQ(2);
+    sendIRQ((dmactrl & DMACTRL::TO_NAND) ? DMAINTR::WRITE_FINISHED : DMAINTR::READ_FINISHED); // 1 = Read finished, 2 = Write finished?
 }
 
 void finishErase() {
@@ -144,7 +149,7 @@ void finishErase() {
     deviceStatus |= (u32)NANDStatus::DEVICE_READY;
     deviceStatus &= ~(u32)NANDStatus::ERASE_ERROR;
 
-    sendIRQ(1);
+    sendIRQ(DMAINTR::WRITE_FINISHED); // Hardware sets this to 0x302 after a block erase
 }
 
 void startTransfer() {
@@ -251,13 +256,13 @@ void write(u32 addr, u32 data) {
         case NANDReg::CONTROL:
             std::printf("[NAND    ] Write @ CONTROL = 0x%08X\n", data);
 
-            control = data;
+            control = data & 0x30103;
             break;
         case NANDReg::STATUS:
             std::printf("[NAND    ] Write @ STATUS = 0x%08X\n", data);
 
             if (!(deviceStatus & (u32)NANDStatus::NOT_WRITE_PROTECTED) && (data & (u32)NANDStatus::NOT_WRITE_PROTECTED)) {
-                scheduler::addEvent(idUnlockNand, 0, NAND_OP_CYCLES);
+                scheduler::addEvent(idUnlockNand, 0, 1000);
             }
             break;
         case NANDReg::COMMAND:
@@ -291,6 +296,9 @@ void write(u32 addr, u32 data) {
             assert(deviceStatus & (u32)NANDStatus::DEVICE_READY);
 
             deviceStatus = (u32)NANDStatus::NOT_WRITE_PROTECTED | (u32)NANDStatus::DEVICE_READY;
+            dmaintr = 0;
+
+            intc::clearIRQ(intc::InterruptSource::NAND);
             break;
         case NANDReg::DMAPAGE:
             std::printf("[NAND    ] Write @ DMAPAGE = 0x%08X\n", data);
@@ -309,7 +317,7 @@ void write(u32 addr, u32 data) {
         case NANDReg::DMAINTR:
             std::printf("[NAND    ] Write @ DMAINTR = 0x%08X\n", data);
 
-            dmaintr = (data & 0xF00) | (dmaintr & (~data & 3));
+            dmaintr = (data & 0x300) | (dmaintr & (~data & 3)); // [9:8] is R/W, [1:0] is cleared upon writing "1" bits
 
             checkInterrupt();
             break;
