@@ -17,10 +17,10 @@ namespace psp::syscon {
 
 constexpr i64 SYSCON_OP_CYCLES = 50000;
 
-constexpr u32 BARYON_VERSION  = 0x00040600;
-constexpr u32 TACHYON_VERSION = 0x30000001;
+constexpr u32 BARYON_VERSION  = 0x00114000;
+constexpr u32 TACHYON_VERSION = 0x40000001;
 
-constexpr u32 FUSECONFIG = 0x00002400; // Matches Baryon version? TODO: check this
+constexpr u32 FUSECONFIG = 0x0000590B;
 
 constexpr u32 BATTERY_TEMP = 20;         // 20C?
 constexpr u32 BATTERY_VOLT = 4150;       // 4150mV
@@ -100,7 +100,7 @@ struct SysConRegs {
     // Enable
     u32 reseten, ioen, gpioen;
 
-    u32 ramsize = TACHYON_VERSION, pllfreq = 333, spiclk;
+    u32 spiclk;
 
     u32 unknown[3];
 };
@@ -109,6 +109,9 @@ SysConRegs regs[2];
 
 u32 avcpower;
 u32 clksel1, clksel2;
+
+u32 ramsize = TACHYON_VERSION;
+u32 pllfreq = 3;
 
 // Serial registers
 u32 serialflags;
@@ -473,7 +476,7 @@ u32 read(int cpuID, u32 addr) {
         case SysConReg::RAMSIZE:
             std::puts("[SysCon  ] Read @ RAMSIZE");
 
-            return r.ramsize;
+            return ramsize;
         case SysConReg::RESETEN:
             std::puts("[SysCon  ] Read @ RESETEN");
 
@@ -513,7 +516,7 @@ u32 read(int cpuID, u32 addr) {
         case SysConReg::PLLFREQ:
             std::puts("[SysCon  ] Read @ PLLFREQ");
 
-            return r.pllfreq;
+            return pllfreq;
         case SysConReg::IOEN:
             std::puts("[SysCon  ] Read @ IOEN");
 
@@ -576,10 +579,10 @@ void write(int cpuID, u32 addr, u32 data) {
 
             r.unknown[0] = data;
             break;
-        case SysConReg::RAMSIZE:
+        case SysConReg::RAMSIZE: // Possibly shared
             std::printf("[SysCon  ] Write @ RAMSIZE = 0x%08X\n", data);
 
-            r.ramsize = data;
+            ramsize = (ramsize & 0xFF000800) | (data & 0xFFF7FF); // Tachyon version is RO
             break;
         case SysConReg::RESETEN:
             std::printf("[SysCon  ] Write @ RESETEN = 0x%08X\n", data);
