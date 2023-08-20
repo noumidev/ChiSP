@@ -15,19 +15,19 @@
 
 namespace psp::syscon {
 
-constexpr i64 SYSCON_OP_CYCLES = 50000;
+constexpr i64 SYSCON_OP_CYCLES = 9500 * scheduler::_1MS;
 
 constexpr u32 BARYON_VERSION  = 0x00114000;
 constexpr u32 TACHYON_VERSION = 0x40000001;
 
 constexpr u32 FUSECONFIG = 0x0000590B;
 
-constexpr u32 BATTERY_TEMP = 20;         // 20C?
-constexpr u32 BATTERY_VOLT = 4150;       // 4150mV
-constexpr u32 BATTERY_ELEC = 4150;       // ??
-constexpr u32 BATTERY_FULL_CAP = 1800;   // 1800mAh
-constexpr u32 BATTERY_CURR_CAP = 1800;   // 1800mAh
-constexpr u32 BATTERY_LIMIT_TIME = 400; // Taken from JPCSP
+constexpr u32 BATTERY_TEMP = 20;         // In Celsius
+constexpr u32 BATTERY_VOLT = 3906;       // Max: 4150mV
+constexpr u32 BATTERY_ELEC = -244;       // Current - max voltage?
+constexpr u32 BATTERY_FULL_CAP = 1790;   // Max: 1800mAh
+constexpr u32 BATTERY_CURR_CAP = 748;
+constexpr u32 BATTERY_LIMIT_TIME = 187;  // In??
 
 enum class SysConReg {
     NMIEN = 0x1C100000,
@@ -106,6 +106,14 @@ struct SysConRegs {
 };
 
 SysConRegs regs[2];
+
+// Values taken from my PSP
+u8 scratchpad[0x20] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x04, 0x2F, 0x00, 0x00, 0xEA, 0x3C, 0x91, 0x4B,
+    0x4F, 0x5F, 0x52, 0x58, 0x1C, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
 
 u32 avcpower;
 u32 clksel1, clksel2;
@@ -326,7 +334,7 @@ void cmdReadScratchpad() {
     writeResponse(size);
 
     for (int i = 0; i < size; i++) {
-        rxQueue.push(0xFF);
+        rxQueue.push(scratchpad[src + i]);
     }
 }
 
