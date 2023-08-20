@@ -161,7 +161,7 @@ void startTransfer() {
 void startErase() {
     deviceStatus &= ~(u32)NANDStatus::DEVICE_READY;
 
-    scheduler::addEvent(idFinishErase, 0, NAND_OP_CYCLES);
+    scheduler::addEvent(idFinishErase, 0, NAND_OP_CYCLES); // Normally takes ~1.7 ms
 }
 
 void doCommand(u8 cmd) {
