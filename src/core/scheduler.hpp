@@ -11,10 +11,14 @@
 
 namespace psp::scheduler {
 
+constexpr i64 _1MS = 333;
+
 u64 registerEvent(std::function<void(int)> func);
 
 void addEvent(u64 id, int param, i64 cyclesUntilEvent);
 
 i64 getRunCycles();
+
+void run(i64 runCycles);
 
 }

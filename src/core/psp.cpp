@@ -59,6 +59,8 @@ void run() {
 
         interpreter::run(&cpu, runCycles);
         interpreter::run(&me , runCycles >> 1);
+
+        scheduler::run(runCycles);
     }
 }
 

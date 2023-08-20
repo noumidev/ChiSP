@@ -11,7 +11,7 @@
 
 namespace psp::scheduler {
 
-constexpr i64 MAX_RUN_CYCLES = 512;
+constexpr i64 MAX_RUN_CYCLES = 64;
 
 // Scheduler event
 struct Event {
@@ -49,32 +49,24 @@ void addEvent(u64 id, int param, i64 cyclesUntilEvent) {
 }
 
 i64 getRunCycles() {
-    if (events.empty()) {
-        globalTimestamp += MAX_RUN_CYCLES;
+    return MAX_RUN_CYCLES;
+}
 
-        return MAX_RUN_CYCLES;
-    }
+void run(i64 runCycles) {
+    const auto newTimestamp = globalTimestamp + runCycles;
 
-    // Get next event, run cycles; update timestamp for new events
-    const auto nextEvent = events.top(); events.pop();
-    const auto runCycles = nextEvent.timestamp - globalTimestamp;
+    while (events.top().timestamp <= newTimestamp) {
+        globalTimestamp = events.top().timestamp;
 
-    globalTimestamp = nextEvent.timestamp;
+        const auto id = events.top().id;
+        const auto param = events.top().param;
 
-    registeredFuncs[nextEvent.id](nextEvent.param);
-
-    while (true) { // Run all events with same timestamp
-        if (events.empty()) break;
-
-        const auto nextNextEvent = events.top();
-
-        if (nextNextEvent.timestamp != nextEvent.timestamp) break;
         events.pop();
 
-        registeredFuncs[nextNextEvent.id](nextNextEvent.param);
+        registeredFuncs[id](param);
     }
 
-    return runCycles;
+    globalTimestamp = newTimestamp;
 }
 
 }
