@@ -7,6 +7,12 @@
 
 #include "../../common/types.hpp"
 
+namespace psp::allegrex {
+
+struct Allegrex;
+
+}
+
 namespace psp::allegrex::cop0 {
 
 enum class Exception {
@@ -15,13 +21,17 @@ enum class Exception {
 };
 
 struct COP0 {
-    void init(int cpuID);
+    void init(Allegrex *allegrex, int cpuID);
 
     u32  getControl(int idx);
     void setControl(int idx, u32 data);
 
     u32  getStatus(int idx);
     void setStatus(int idx, u32 data);
+
+    void runCount(i64 runCycles);
+
+    bool isCOPUsable(int copN);
 
     u32 getEBase();
 
@@ -40,14 +50,17 @@ struct COP0 {
 
     bool isInterruptPending();
     void setIRQPending(bool irqPending);
+    void setCountPending(bool countPending);
 
     void setSyscallCode(u32 code);
 
     u32 exceptionReturn();
 private:
+    Allegrex *allegrex;
+
     // Status
     u32 cpuID;
-    u32 count, compare;
+    u32 count, oldCount, compare;
     u32 status, cause;
     u32 epc;
     u32 scCode;

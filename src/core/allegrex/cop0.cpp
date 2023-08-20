@@ -8,6 +8,8 @@
 #include <cassert>
 #include <cstdio>
 
+#include "allegrex.hpp"
+
 namespace psp::allegrex::cop0 {
 
 constexpr u32 CONFIG = 0x480;
@@ -32,8 +34,9 @@ enum class StatusReg {
 
 enum Cause {
     EXCODE = 0x1F << 2,
-    IP  = 0x23 << 10,
+    IP  = 0xFF << 8,
     IP0 = 1 << 10,
+    IP5 = 1 << 15,
     BD  = 1 << 31,
 };
 
@@ -41,14 +44,17 @@ enum Status {
     IE  = 1 << 0,
     EXL = 1 << 1,
     ERL = 1 << 2,
-    IM  = 0x23 << 10,
+    IM  = 0xFF << 8,
     BEV = 1 << 22,
 };
 
-void COP0::init(int cpuID) {
+void COP0::init(Allegrex *allegrex, int cpuID) {
     assert((cpuID >= 0) && (cpuID < 2));
 
+    this->allegrex = allegrex;
     this->cpuID = cpuID;
+
+    compare = -1;
 
     std::printf("[%s] OK\n", cop0Name[cpuID]);
 }
@@ -96,17 +102,23 @@ void COP0::setStatus(int idx, u32 data) {
     switch ((StatusReg)idx) {
         case StatusReg::Count:
             std::printf("COUNT: 0x%08X\n", data);
-            count = data;
+            count = oldCount = data;
             break;
         case StatusReg::Compare:
             std::printf("COMPARE: 0x%08X\n", data);
             compare = data;
+
+            setCountPending(false);
             break;
         case StatusReg::Status:
             status = data;
+
+            allegrex->checkInterrupt();
             break;
         case StatusReg::Cause:
-            cause = data;
+            cause = (cause & 0xFFFFFCFF) | (data & 0x300);
+
+            allegrex->checkInterrupt();
             break;
         case StatusReg::EPC:
             epc = data;
@@ -125,6 +137,24 @@ void COP0::setStatus(int idx, u32 data) {
 
             exit(0);
     }
+}
+
+void COP0::runCount(i64 runCycles) {
+    oldCount = count;
+
+    count += runCycles;
+
+    if ((oldCount < compare) && (count >= compare)) {
+        std::printf("COUNT >= COMPARE (0x%08X 0x%08X)\n", count, compare);
+
+        setCountPending(true);
+
+        allegrex->checkInterrupt();
+    }
+}
+
+bool COP0::isCOPUsable(int copN) {
+    return (!copN || (status & (1 << (28 + copN))));
 }
 
 u32 COP0::getEBase() {
@@ -177,6 +207,12 @@ void COP0::setIRQPending(bool irqPending) {
     // Clear old interrupt pending bit, set new value
     cause &= ~Cause::IP0;
     cause |= (u32)irqPending << 10;
+}
+
+void COP0::setCountPending(bool countPending) {
+    // Clear count pending bit, set new value
+    cause &= ~Cause::IP5;
+    cause |= (u32)countPending << 15;
 }
 
 void COP0::setSyscallCode(u32 code) {

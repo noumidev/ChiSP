@@ -22,7 +22,7 @@ const char *typeNames[] = {
 void Allegrex::init(Type type) {
     this->type = type;
 
-    cop0.init((int)type);
+    cop0.init(this, (int)type);
     fpu.init((int)type);
 
     // Clear all GPRs and delay slot helpers

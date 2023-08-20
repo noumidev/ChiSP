@@ -305,6 +305,8 @@ void iBCF(Allegrex *allegrex, int copN, u32 instr) {
     const auto offset = (i32)(i16)getImm(instr) << 2;
     const auto target = allegrex->getPC() + offset;
 
+    assert(allegrex->cop0.isCOPUsable(copN));
+
     bool cpcond;
     switch (copN) {
         case 1:
@@ -327,6 +329,8 @@ void iBCF(Allegrex *allegrex, int copN, u32 instr) {
 void iBCFL(Allegrex *allegrex, int copN, u32 instr) {
     const auto offset = (i32)(i16)getImm(instr) << 2;
     const auto target = allegrex->getPC() + offset;
+
+    assert(allegrex->cop0.isCOPUsable(copN));
 
     bool cpcond;
     switch (copN) {
@@ -351,6 +355,8 @@ void iBCT(Allegrex *allegrex, int copN, u32 instr) {
     const auto offset = (i32)(i16)getImm(instr) << 2;
     const auto target = allegrex->getPC() + offset;
 
+    assert(allegrex->cop0.isCOPUsable(copN));
+
     bool cpcond;
     switch (copN) {
         case 1:
@@ -373,6 +379,8 @@ void iBCT(Allegrex *allegrex, int copN, u32 instr) {
 void iBCTL(Allegrex *allegrex, int copN, u32 instr) {
     const auto offset = (i32)(i16)getImm(instr) << 2;
     const auto target = allegrex->getPC() + offset;
+
+    assert(allegrex->cop0.isCOPUsable(copN));
 
     bool cpcond;
     switch (copN) {
@@ -663,6 +671,8 @@ void iCFC(Allegrex *allegrex, int copN, u32 instr) {
 
     u32 data;
 
+    assert(allegrex->cop0.isCOPUsable(copN));
+
     switch (copN) {
         case 0:
             data = allegrex->cop0.getControl(rd);
@@ -709,6 +719,8 @@ void iCTC(Allegrex *allegrex, int copN, u32 instr) {
     const auto rt = getRt(instr);
 
     const auto t = allegrex->get(rt);
+
+    assert(allegrex->cop0.isCOPUsable(copN));
 
     switch (copN) {
         case 0:
@@ -1000,6 +1012,8 @@ void iLWC(Allegrex *allegrex, int copN, u32 instr) {
         exit(0);
     }
 
+    assert(allegrex->cop0.isCOPUsable(copN));
+
     const auto data = allegrex->read32(addr);
 
     switch (copN) {
@@ -1076,6 +1090,8 @@ void iMFC(Allegrex *allegrex, int copN, u32 instr) {
     const auto rt = getRt(instr);
 
     u32 data;
+
+    assert(allegrex->cop0.isCOPUsable(copN));
 
     switch (copN) {
         case 0:
@@ -1183,6 +1199,8 @@ void iMTC(Allegrex *allegrex, int copN, u32 instr) {
     const auto rt = getRt(instr);
 
     const auto t = allegrex->get(rt);
+
+    assert(allegrex->cop0.isCOPUsable(copN));
 
     switch (copN) {
         case 0:
@@ -1577,6 +1595,8 @@ void iSWC(Allegrex *allegrex, int copN, u32 instr) {
     const auto imm = (i32)(i16)getImm(instr);
 
     const auto addr = allegrex->get(rs) + imm;
+
+    assert(allegrex->cop0.isCOPUsable(copN));
     
     u32 data;
     switch (copN) {
@@ -1988,6 +2008,8 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::COP1:
             {
+                assert(allegrex->cop0.isCOPUsable(1));
+
                 const auto rs = getRs(instr);
 
                 switch ((COPOpcode)rs) {
@@ -2293,6 +2315,8 @@ void printModules() {
 u32 sysconCmdSyncRet, idStorageLookupRet;
 
 void run(Allegrex *allegrex, i64 runCycles) {
+    allegrex->cop0.runCount(runCycles);
+
     for (i64 i = 0; i < runCycles;) {
         if (allegrex->isHalted) return;
 
