@@ -19,6 +19,7 @@ constexpr i64 SPOCK_OP_CYCLES = 1 << 10;
 enum class SPOCKReg {
     RESET = 0x1DF00008,
     COMMAND  = 0x1DF00010,
+    UNKNOWN0 = 0x1DF00014,
     UNKNOWN1 = 0x1DF00018,
     UNKNOWN2 = 0x1DF0001C,
     IRQFLAGS = 0x1DF00020,
@@ -94,6 +95,14 @@ u32 read(u32 addr) {
             std::puts("[SPOCK   ] Read @ RESET");
 
             return reset;
+        case SPOCKReg::COMMAND:
+            std::puts("[SPOCK   ] Read @ COMMAND");
+
+            return cmd;
+        case SPOCKReg::UNKNOWN0:
+            std::printf("[SPOCK   ] Unknown read @ 0x%08X\n", addr);
+
+            return unknown[0];
         case SPOCKReg::UNKNOWN1:
             std::printf("[SPOCK   ] Unknown read @ 0x%08X\n", addr);
 
