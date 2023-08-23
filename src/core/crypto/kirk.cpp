@@ -412,7 +412,7 @@ u32 read(u32 addr) {
             std::printf("[KIRK    ] Read @ RESULT\n");
             return 0;
         case KIRKReg::STATUS:
-            std::printf("[KIRK    ] Read @ STATUS\n");
+            //std::printf("[KIRK    ] Read @ STATUS\n");
             return status;
         case KIRKReg::ASYNCSTAT:
             std::printf("[KIRK    ] Read @ ASYNCSTAT\n");
