@@ -98,6 +98,10 @@ void write(int cpuID, u32 addr, u32 data) {
                 std::printf("[INTC    ] Write @ MASK%u = 0x%08X\n", idx + 1, data);
 
                 mask[cpuID][idx] = data;
+
+                const auto newFlags = mask[cpuID][idx] & flags[cpuID][idx];
+                
+                unmaskedflags[cpuID][idx] |= newFlags;
             }
             break;
         default:
@@ -193,8 +197,8 @@ void clearIRQ(InterruptSource irqSource) {
         irqUnmaskedflags = &unmaskedflags[0][1];
         irqFlags = &flags[0][1];
     } else {
-        irqUnmaskedflags = &unmaskedflags[0][1];
-        irqFlags = &flags[0][1];
+        irqUnmaskedflags = &unmaskedflags[0][2];
+        irqFlags = &flags[0][2];
     }
 
     // Mask number to 0-31 range
