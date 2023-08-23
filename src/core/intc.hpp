@@ -12,6 +12,7 @@ namespace psp::intc {
 enum class InterruptSource {
     UART = 0,
     GPIO = 4,
+    ME_VME = 5,
     UMD  = 6,
     I2C  = 12,
     SysTime = 19,
@@ -20,6 +21,7 @@ enum class InterruptSource {
     KIRK = 24,
     GE = 25,
     VSYNC = 30,
+    ME = 31,
     HPRemote = 36,
 };
 
