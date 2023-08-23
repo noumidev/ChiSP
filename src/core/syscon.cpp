@@ -15,11 +15,14 @@
 
 namespace psp::syscon {
 
-constexpr i64 SYSCON_OP_CYCLES = 9500 * scheduler::_1MS;
+constexpr i64 SYSCON_OP_CYCLES = 3500 * scheduler::_1MS;
+
+constexpr u8 BARYON_TIMESTAMP[] = {2, 0, 0, 5, 0, 9, 2, 6, 0, 4, 4, 1}; // 2005/09/26 04:41
 
 constexpr u32 BARYON_VERSION  = 0x00114000;
 constexpr u32 TACHYON_VERSION = 0x40000001;
 
+constexpr u32 FUSEID[2] = {0xB2A18793, 0x0000590B};
 constexpr u32 FUSECONFIG = 0x0000590B;
 
 constexpr u32 BATTERY_TEMP = 20;         // In Celsius
@@ -27,7 +30,7 @@ constexpr u32 BATTERY_VOLT = 3906;       // Max: 4150mV
 constexpr u32 BATTERY_ELEC = -244;       // Current - max voltage?
 constexpr u32 BATTERY_FULL_CAP = 1790;   // Max: 1800mAh
 constexpr u32 BATTERY_CURR_CAP = 748;
-constexpr u32 BATTERY_LIMIT_TIME = 187;  // In??
+constexpr u32 BATTERY_LIMIT_TIME = 187;  // In minutes?
 
 enum class SysConReg {
     NMIEN = 0x1C100000,
@@ -47,7 +50,9 @@ enum class SysConReg {
     IOEN = 0x1C100078,
     GPIOEN = 0x1C10007C,
     CONNECTSTATUS = 0x1C100080,
-    FUSECONFIG = 0x1C100098,
+    FUSEID_LOW  = 0x1C100090,
+    FUSEID_HIGH = 0x1C100094,
+    FUSECONFIG  = 0x1C100098,
     UNKNOWN2 = 0x1C1000FC,
 };
 
@@ -70,6 +75,7 @@ enum class SysConCommand {
     READ_ALARM = 0x0A,
     GET_POWER_SUPPLY_STATUS = 0x0B,
     GET_WAKE_UP_FACTOR = 0x0E,
+    GET_WAKE_UP_REQ = 0x0F,
     GET_TIMESTAMP = 0x11,
     READ_SCRATCHPAD  = 0x24,
     SEND_SETPARAM = 0x25,
@@ -88,6 +94,13 @@ enum class SysConCommand {
     BATTERY_GET_ELEC = 0x64,
     BATTERY_GET_FULL_CAP = 0x67,
     BATTERY_GET_LIMIT_TIME = 0x69,
+};
+
+enum BaryonStatus {
+    AC_POWER   = 1 << 0,
+    WLAN_POWER = 1 << 1,
+    HR_POWER   = 1 << 2,
+    ALARM      = 1 << 3,
 };
 
 struct SysConRegs {
@@ -128,6 +141,7 @@ u32 serialflags;
 std::queue<u8> txQueue, rxQueue;
 
 // SysCon internal registers
+u8  baryonStatus;
 u32 powerStatus = 0;
 
 u64 idFinishCommand;
@@ -196,7 +210,7 @@ void commonRead(SysConCommand cmd) {
         case SysConCommand::GET_KERNEL_DIGITAL_KEY:
             std::puts("[SysCon  ] Get Kernel Digital Key");
 
-            data = 0x4000; // ??
+            data = 0x400000; // NOT WLAN switch??
             break;
         case SysConCommand::READ_CLOCK:
             std::puts("[SysCon  ] Read Clock");
@@ -216,7 +230,12 @@ void commonRead(SysConCommand cmd) {
         case SysConCommand::GET_WAKE_UP_FACTOR:
             std::puts("[SysCon  ] Get Wake Up Factor");
 
-            data = 0; // ??
+            data = 0x440; // 0x4C0 on my console, but crashes in IPL if bit 7 is set
+            break;
+        case SysConCommand::GET_WAKE_UP_REQ:
+            std::puts("[SysCon  ] Get Wake Up Req");
+
+            data = 0xFF; // ??
             break;
         case SysConCommand::GET_POWER_STATUS:
             std::puts("[SysCon  ] Get Power Status");
@@ -251,6 +270,12 @@ void commonWrite(SysConCommand cmd) {
             break;
         case SysConCommand::CTRL_HR_POWER:
             std::puts("[SysCon  ] Ctrl HR Power");
+
+            if (getTxQueue() & 1) {
+                baryonStatus |= BaryonStatus::HR_POWER;
+            } else {
+                baryonStatus &= ~BaryonStatus::HR_POWER;
+            }
             break;
         case SysConCommand::CTRL_VOLTAGE:
             std::puts("[SysCon  ] Ctrl Voltage");
@@ -262,7 +287,13 @@ void commonWrite(SysConCommand cmd) {
             std::puts("[SysCon  ] Ctrl Lepton Power");
             break;
         case SysConCommand::CTRL_WLAN_POWER:
-            std::puts("[SysCon  ] Ctrl WLAN Power");
+            std::printf("[SysCon  ] Ctrl WLAN Power\n");
+
+            if (getTxQueue() & 1) {
+                baryonStatus |= BaryonStatus::WLAN_POWER;
+            } else {
+                baryonStatus &= ~BaryonStatus::WLAN_POWER;
+            }
             break;
         default:
             std::printf("Unhandled SysCon common write 0x%02X\n", (u8)cmd);
@@ -317,9 +348,8 @@ void cmdGetTimestamp() {
 
     writeResponse(12);
 
-    for (int i = 0; i < 6; i++) {
-        rxQueue.push(0);
-        rxQueue.push(0);
+    for (int i = 0; i < 12; i++) {
+        rxQueue.push(BARYON_TIMESTAMP[i]);
     }
 }
 
@@ -369,7 +399,7 @@ void doCommand() {
     const auto cmd = getTxQueue();
     const auto len = getTxQueue();
 
-    rxQueue.push(0x01); // Baryon status (AC plugged in)
+    rxQueue.push(baryonStatus);
 
     switch ((SysConCommand)cmd) {
         case SysConCommand::GET_BARYON_VERSION:
@@ -392,6 +422,9 @@ void doCommand() {
             break;
         case SysConCommand::GET_WAKE_UP_FACTOR:
             commonRead(SysConCommand::GET_WAKE_UP_FACTOR);
+            break;
+        case SysConCommand::GET_WAKE_UP_REQ:
+            commonRead(SysConCommand::GET_WAKE_UP_REQ);
             break;
         case SysConCommand::GET_TIMESTAMP:
             cmdGetTimestamp();
@@ -458,7 +491,6 @@ void doCommand() {
     serialflags |= 5;
 
     gpio::set(gpio::GPIOPin::SYSCON_END);
-    gpio::clear(gpio::GPIOPin::SYSCON_START);
 }
 
 void finishCommand() {
@@ -467,6 +499,8 @@ void finishCommand() {
 
 void init() {
     idFinishCommand = scheduler::registerEvent([](int) {finishCommand();});
+
+    baryonStatus = BaryonStatus::ALARM;
 }
 
 u32 read(int cpuID, u32 addr) {
@@ -537,6 +571,14 @@ u32 read(int cpuID, u32 addr) {
             std::puts("[SysCon  ] Read @ CONNECTSTATUS");
 
             return 0;
+        case SysConReg::FUSEID_LOW:
+            std::puts("[SysCon  ] Read @ FUSEID_LOW");
+
+            return FUSEID[0];
+        case SysConReg::FUSEID_HIGH:
+            std::puts("[SysCon  ] Read @ FUSEID_HIGH");
+
+            return FUSEID[1];
         case SysConReg::FUSECONFIG:
             std::puts("[SysCon  ] Read @ FUSECONFIG");
 
@@ -673,13 +715,15 @@ void writeSerial(u32 addr, u32 data) {
         case SysConSerialReg::CONTROL:
             std::printf("[SysCon  ] Write @ SERIALCONTROL = 0x%08X\n", data);
 
+            if (!(data & 2)) {
+                gpio::clear(gpio::GPIOPin::SYSCON_END);
+            }
+
             switch (data) {
                 case 4:
                     clearTxQueue();
                     break;
                 case 6:
-                    gpio::clear(gpio::GPIOPin::SYSCON_END);
-
                     scheduler::addEvent(idFinishCommand, 0, SYSCON_OP_CYCLES);
                     break;
                 default:
