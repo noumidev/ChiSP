@@ -27,6 +27,7 @@ enum class GEReg {
     ORIGIN0 = 0x1D400120,
     ORIGIN1 = 0x1D400124,
     ORIGIN2 = 0x1D400128,
+    GEOCLK  = 0x1D400200,
     CMDSTATUS = 0x1D400304,
     IRQSTATUS = 0x1D400308,
     IRQSWAP = 0x1D40030C,
@@ -54,6 +55,9 @@ struct Registers {
 
 u32 cmdargs[256];
 
+// Matrices
+u32 bone[96], world[12], view[12], proj[12], tgen[12], count[12];
+
 u32 control;
 u32 edramsize2;
 u32 listaddr, stalladdr;
@@ -61,6 +65,8 @@ u32 retaddr[2];
 u32 vtxaddr, idxaddr;
 u32 origin[3];
 u32 cmdstatus, irqstatus;
+
+u32 geoclk;
 
 u32 unknown[1];
 
@@ -98,6 +104,42 @@ u32 read(u32 addr) {
         std::printf("[GE      ] Read @ CMDARGS%u\n", idx);
 
         return cmdargs[idx];
+    } else if ((addr >= 0x1D400C00) && (addr < 0x1D400D80)) {
+        const auto idx = (addr - 0x1D400C00) >> 2;
+
+        std::printf("[GE      ] Read @ BONE%u\n", idx);
+
+        return bone[idx];
+    } else if ((addr >= 0x1D400D80) && (addr < 0x1D400DB0)) {
+        const auto idx = (addr - 0x1D400D80) >> 2;
+
+        std::printf("[GE      ] Read @ WORLD%u\n", idx);
+
+        return world[idx];
+    } else if ((addr >= 0x1D400DB0) && (addr < 0x1D400DE0)) {
+        const auto idx = (addr - 0x1D400DB0) >> 2;
+
+        std::printf("[GE      ] Read @ VIEW%u\n", idx);
+
+        return view[idx];
+    } else if ((addr >= 0x1D400DE0) && (addr < 0x1D400E20)) {
+        const auto idx = (addr - 0x1D400DE0) >> 2;
+
+        std::printf("[GE      ] Read @ PROJ%u\n", idx);
+
+        return proj[idx];
+    } else if ((addr >= 0x1D400E20) && (addr < 0x1D400E50)) {
+        const auto idx = (addr - 0x1D400E20) >> 2;
+
+        std::printf("[GE      ] Read @ TGEN%u\n", idx);
+
+        return tgen[idx];
+    } else if ((addr >= 0x1D400E50) && (addr < 0x1D400E80)) {
+        const auto idx = (addr - 0x1D400E50) >> 2;
+
+        std::printf("[GE      ] Read @ COUNT%u\n", idx);
+
+        return count[idx];
     }
 
     switch ((GEReg)addr) {
@@ -113,6 +155,46 @@ u32 read(u32 addr) {
             std::printf("[GE      ] Read @ CONTROL\n");
 
             return control;
+        case GEReg::LISTADDR:
+            std::printf("[GE      ] Read @ LISTADDR\n");
+
+            return listaddr;
+        case GEReg::STALLADDR:
+            std::printf("[GE      ] Read @ STALLADDR\n");
+
+            return stalladdr;
+        case GEReg::RETADDR1:
+            std::printf("[GE      ] Read @ RETADDR1\n");
+
+            return retaddr[0];
+        case GEReg::RETADDR2:
+            std::printf("[GE      ] Read @ RETADDR2\n");
+
+            return retaddr[1];
+        case GEReg::VTXADDR:
+            std::printf("[GE      ] Read @ VTXADDR\n");
+
+            return vtxaddr;
+        case GEReg::IDXADDR:
+            std::printf("[GE      ] Read @ IDXADDR\n");
+
+            return idxaddr;
+        case GEReg::ORIGIN0:
+            std::printf("[GE      ] Read @ ORIGIN0\n");
+
+            return origin[0];
+        case GEReg::ORIGIN1:
+            std::printf("[GE      ] Read @ ORIGIN1\n");
+
+            return origin[1];
+        case GEReg::ORIGIN2:
+            std::printf("[GE      ] Read @ ORIGIN2\n");
+
+            return origin[2];
+        case GEReg::GEOCLK:
+            std::printf("[GE      ] Read @ GEOCLK\n");
+
+            return geoclk;
         case GEReg::CMDSTATUS:
             std::printf("[GE      ] Read @ CMDSTATUS\n");
 
