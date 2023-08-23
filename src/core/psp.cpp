@@ -12,6 +12,7 @@
 #include "dmacplus.hpp"
 #include "ge.hpp"
 #include "hpremote.hpp"
+#include "intc.hpp"
 #include "i2c.hpp"
 #include "memory.hpp"
 #include "nand.hpp"
@@ -80,6 +81,10 @@ void resetCPU() {
 
 void resetME() {
     me.reset();
+}
+
+void postME() {
+    intc::meSendIRQ(intc::InterruptSource::ME_VME);
 }
 
 }

@@ -16,4 +16,6 @@ void meSetIRQPending(bool irqPending);
 void resetCPU();
 void resetME();
 
+void postME();
+
 }
