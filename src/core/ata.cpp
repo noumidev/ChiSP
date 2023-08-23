@@ -178,6 +178,9 @@ void writeATA1(u32 addr, u8 data) {
         
             device = data;
             break;
+        case ATA1Reg::DEVCTL:
+            std::printf("[ATA     ] Write @ DEVCTL = 0x%02X\n", data);
+            break;
         default:
             std::printf("Unhandled ATA write @ 0x%08X = 0x%02X\n", addr, data);
 
