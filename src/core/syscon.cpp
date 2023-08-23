@@ -79,6 +79,7 @@ enum class SysConCommand {
     GET_TIMESTAMP = 0x11,
     READ_SCRATCHPAD  = 0x24,
     SEND_SETPARAM = 0x25,
+    RECEIVE_SETPARAM = 0x26,
     CTRL_TACHYON_WDT = 0x31,
     RESET_DEVICE = 0x32,
     CTRL_ANALOG_XY_POLLING = 0x33,
@@ -87,6 +88,7 @@ enum class SysConCommand {
     GET_POWER_STATUS = 0x46,
     CTRL_LED = 0x47,
     CTRL_LEPTON_POWER = 0x4B,
+    CTRL_MS_POWER = 0x4C,
     CTRL_WLAN_POWER = 0x4D,
     BATTERY_GET_STATUS_CAP = 0x61,
     BATTERY_GET_TEMP = 0x62,
@@ -127,6 +129,8 @@ u8 scratchpad[0x20] = {
     0x4F, 0x5F, 0x52, 0x58, 0x1C, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
+
+u8 setparam[8];
 
 u32 avcpower;
 u32 clksel1, clksel2;
@@ -286,6 +290,9 @@ void commonWrite(SysConCommand cmd) {
         case SysConCommand::CTRL_LEPTON_POWER:
             std::puts("[SysCon  ] Ctrl Lepton Power");
             break;
+        case SysConCommand::CTRL_MS_POWER:
+            std::puts("[SysCon  ] Ctrl MS Power");
+            break;
         case SysConCommand::CTRL_WLAN_POWER:
             std::printf("[SysCon  ] Ctrl WLAN Power\n");
 
@@ -368,10 +375,24 @@ void cmdReadScratchpad() {
     }
 }
 
+void cmdReceiveSetparam() {
+    std::printf("[SysCon  ] Receive Setparam\n");
+
+    writeResponse(8);
+
+    for (int i = 0; i < (int)sizeof(setparam); i++) {
+        rxQueue.push(setparam[i]);
+    }
+}
+
 void cmdSendSetparam() {
     std::printf("[SysCon  ] Send Setparam\n");
 
     writeResponse(0);
+
+    for (int i = 0; i < (int)sizeof(setparam); i++) {
+        setparam[i] = getTxQueue();
+    }
 }
 
 // Calculates and pushes response hash
@@ -435,6 +456,9 @@ void doCommand() {
         case SysConCommand::SEND_SETPARAM:
             cmdSendSetparam();
             break;
+        case SysConCommand::RECEIVE_SETPARAM:
+            cmdReceiveSetparam();
+            break;
         case SysConCommand::CTRL_TACHYON_WDT:
             commonWrite(SysConCommand::CTRL_TACHYON_WDT);
             break;
@@ -458,6 +482,9 @@ void doCommand() {
             break;
         case SysConCommand::CTRL_LEPTON_POWER:
             commonWrite(SysConCommand::CTRL_LEPTON_POWER);
+            break;
+        case SysConCommand::CTRL_MS_POWER:
+            commonWrite(SysConCommand::CTRL_MS_POWER);
             break;
         case SysConCommand::CTRL_WLAN_POWER:
             commonWrite(SysConCommand::CTRL_WLAN_POWER);
