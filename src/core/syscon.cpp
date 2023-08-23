@@ -10,6 +10,7 @@
 #include <queue>
 
 #include "gpio.hpp"
+#include "intc.hpp"
 #include "psp.hpp"
 #include "scheduler.hpp"
 
@@ -37,6 +38,7 @@ enum class SysConReg {
     NMIFLAG = 0x1C100004,
     UNKNOWN0 = 0x1C10003C,
     RAMSIZE = 0x1C100040,
+    POSTME  = 0x1C100044,
     RESETEN = 0x1C10004C,
     BUSCLKEN  = 0x1C100050,
     CLKEN  = 0x1C100054,
@@ -660,6 +662,19 @@ void write(int cpuID, u32 addr, u32 data) {
             std::printf("[SysCon  ] Write @ RAMSIZE = 0x%08X\n", data);
 
             ramsize = (ramsize & 0xFF000800) | (data & 0xFFF7FF); // Tachyon version is RO
+            break;
+        case SysConReg::POSTME:
+            std::printf("[SysCon  ] Write @ POSTME = 0x%08X\n", data);
+
+            if (data & 1) {
+                if (cpuID == 0) {
+                    intc::meSendIRQ(intc::InterruptSource::ME);
+
+                    postME();
+                } else {
+                    intc::sendIRQ(intc::InterruptSource::ME);
+                }
+            }
             break;
         case SysConReg::RESETEN:
             std::printf("[SysCon  ] Write @ RESETEN = 0x%08X\n", data);
