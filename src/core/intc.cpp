@@ -31,8 +31,6 @@ void checkInterrupt() {
 }
 
 void meCheckInterrupt() {
-    std::printf("[MEINTC  ] FLAGS: 0x%08X, MASK: 0x%08X\n", unmaskedflags[1][0], mask[1][0]);
-
     meSetIRQPending((unmaskedflags[1][0] & mask[1][0]) | (unmaskedflags[1][1] & mask[1][1]) | (unmaskedflags[1][2] & mask[1][2]));
 }
 
