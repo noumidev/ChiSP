@@ -15,7 +15,7 @@
 
 namespace psp::nand {
 
-constexpr i64 NAND_OP_CYCLES = 1 << 16;
+constexpr i64 NAND_OP_CYCLES = 60 * scheduler::_1MS;
 
 constexpr u64 PAGE_SIZE = 512;
 constexpr u64 PAGE_SIZE_ECC = PAGE_SIZE + 16;
