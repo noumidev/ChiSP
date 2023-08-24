@@ -66,6 +66,45 @@ enum {
     CMD_ORIGIN = 0x14,
     CMD_REGION1 = 0x15,
     CMD_REGION2 = 0x16,
+    CMD_LTE = 0x17,
+    CMD_LE0 = 0x18,
+    CMD_LE1 = 0x19,
+    CMD_LE2 = 0x1A,
+    CMD_LE3 = 0x1B,
+    CMD_CLE = 0x1C,
+    CMD_BCE = 0x1D,
+    CMD_TME = 0x1E,
+    CMD_FGE = 0x1F,
+    CMD_DTE = 0x20,
+    CMD_ABE = 0x21,
+    CMD_ATE = 0x22,
+    CMD_ZTE = 0x23,
+    CMD_STE = 0x24,
+    CMD_AAE = 0x25,
+    CMD_PCE = 0x26,
+    CMD_CTE = 0x27,
+    CMD_LOE = 0x28,
+    CMD_WEIGHT0 = 0x2C,
+    CMD_WEIGHT1 = 0x2D,
+    CMD_WEIGHT2 = 0x2E,
+    CMD_WEIGHT3 = 0x2F,
+    CMD_WEIGHT4 = 0x30,
+    CMD_WEIGHT5 = 0x31,
+    CMD_WEIGHT6 = 0x32,
+    CMD_WEIGHT7 = 0x33,
+    CMD_DIVIDE = 0x36,
+    CMD_PPM = 0x37,
+    CMD_PFACE = 0x38,
+    CMD_SX = 0x42,
+    CMD_SY = 0x43,
+    CMD_SZ = 0x44,
+    CMD_TX = 0x45,
+    CMD_TY = 0x46,
+    CMD_TZ = 0x47,
+    CMD_SU = 0x48,
+    CMD_SV = 0x49,
+    CMD_TU = 0x4A,
+    CMD_TV = 0x4B,
 };
 
 struct VTYPE {
@@ -85,9 +124,29 @@ struct FrameBufferConfig {
 } __attribute__((packed));
 
 struct Registers {
+    // --- Addresses
+
     u32 base;
 
+    // Feature enable
+    bool tme, zte;
+
+    // --- Vertices
+
     VTYPE vtype;
+
+    // Vertex weights
+    f32 weight[8];
+
+    // --- Coordinates
+
+    // Viewport
+    f32 s[3], t[3];
+
+    // --- Textures
+
+    // Texture scale + offset
+    f32 su, sv, tu, tv;
 };
 
 std::array<u32, SCR_WIDTH * SCR_HEIGHT> fb;
@@ -438,6 +497,133 @@ void executeDisplayList() {
                 break;
             case CMD_REGION2:
                 std::printf("[GE      ] [0x%08X] REGION2 0x%05X\n", cpc, instr & 0xFFFFF);
+                break;
+            case CMD_LTE:
+                std::printf("[GE      ] [0x%08X] LTE %u\n", cpc, instr & 1);
+                break;
+            case CMD_LE0:
+            case CMD_LE1:
+            case CMD_LE2:
+            case CMD_LE3:
+                std::printf("[GE      ] [0x%08X] LE%d %u\n", cpc, cmd - CMD_LE0, instr & 1);
+                break;
+            case CMD_CLE:
+                std::printf("[GE      ] [0x%08X] CLE %u\n", cpc, instr & 1);
+                break;
+            case CMD_BCE:
+                std::printf("[GE      ] [0x%08X] BCE %u\n", cpc, instr & 1);
+                break;
+            case CMD_TME:
+                std::printf("[GE      ] [0x%08X] TME %u\n", cpc, instr & 1);
+
+                regs.tme = instr & 1;
+                break;
+            case CMD_FGE:
+                std::printf("[GE      ] [0x%08X] FGE %u\n", cpc, instr & 1);
+                break;
+            case CMD_DTE:
+                std::printf("[GE      ] [0x%08X] DTE %u\n", cpc, instr & 1);
+                break;
+            case CMD_ABE:
+                std::printf("[GE      ] [0x%08X] ABE %u\n", cpc, instr & 1);
+                break;
+            case CMD_ATE:
+                std::printf("[GE      ] [0x%08X] ATE %u\n", cpc, instr & 1);
+                break;
+            case CMD_ZTE:
+                std::printf("[GE      ] [0x%08X] ZTE %u\n", cpc, instr & 1);
+
+                regs.zte = instr & 1;
+                break;
+            case CMD_STE:
+                std::printf("[GE      ] [0x%08X] STE %u\n", cpc, instr & 1);
+                break;
+            case CMD_AAE:
+                std::printf("[GE      ] [0x%08X] AAE %u\n", cpc, instr & 1);
+                break;
+            case CMD_PCE:
+                std::printf("[GE      ] [0x%08X] PCE %u\n", cpc, instr & 1);
+                break;
+            case CMD_CTE:
+                std::printf("[GE      ] [0x%08X] CTE %u\n", cpc, instr & 1);
+                break;
+            case CMD_LOE:
+                std::printf("[GE      ] [0x%08X] LOE %u\n", cpc, instr & 1);
+                break;
+            case CMD_WEIGHT0:
+            case CMD_WEIGHT1:
+            case CMD_WEIGHT2:
+            case CMD_WEIGHT3:
+            case CMD_WEIGHT4:
+            case CMD_WEIGHT5:
+            case CMD_WEIGHT6:
+            case CMD_WEIGHT7:
+                {
+                    const auto idx = cmd - CMD_WEIGHT0;
+
+                    regs.weight[idx] = toFloat(instr << 8);
+
+                    std::printf("[GE      ] [0x%08X] WEIGHT%d %f\n", cpc, idx, regs.weight[idx]);
+                }
+                break;
+            case CMD_DIVIDE:
+                std::printf("[GE      ] [0x%08X] DIVIDE 0x%04X\n", cpc, instr & 0x7FFF);
+                break;
+            case CMD_PPM:
+                std::printf("[GE      ] [0x%08X] PPM %u\n", cpc, instr & 3);
+                break;
+            case CMD_PFACE:
+                std::printf("[GE      ] [0x%08X] PFACE %u\n", cpc, instr & 1);
+                break;
+            case CMD_SX:
+                regs.s[0] = toFloat(instr << 8);
+
+                std::printf("[GE      ] [0x%08X] SX %f\n", cpc, regs.s[0]);
+                break;
+            case CMD_SY:
+                regs.s[1] = toFloat(instr << 8);
+                
+                std::printf("[GE      ] [0x%08X] SY %f\n", cpc, regs.s[1]);
+                break;
+            case CMD_SZ:
+                regs.s[2] = toFloat(instr << 8);
+                
+                std::printf("[GE      ] [0x%08X] SZ %f\n", cpc, regs.s[2]);
+                break;
+            case CMD_TX:
+                regs.t[0] = toFloat(instr << 8);
+
+                std::printf("[GE      ] [0x%08X] TX %f\n", cpc, regs.t[0]);
+                break;
+            case CMD_TY:
+                regs.t[1] = toFloat(instr << 8);
+                
+                std::printf("[GE      ] [0x%08X] TY %f\n", cpc, regs.t[1]);
+                break;
+            case CMD_TZ:
+                regs.t[2] = toFloat(instr << 8);
+                
+                std::printf("[GE      ] [0x%08X] TZ %f\n", cpc, regs.t[2]);
+                break;
+            case CMD_SU:
+                regs.su = toFloat(instr << 8);
+                
+                std::printf("[GE      ] [0x%08X] SU %f\n", cpc, regs.su);
+                break;
+            case CMD_SV:
+                regs.sv = toFloat(instr << 8);
+                
+                std::printf("[GE      ] [0x%08X] SV %f\n", cpc, regs.sv);
+                break;
+            case CMD_TU:
+                regs.tu = toFloat(instr << 8);
+                
+                std::printf("[GE      ] [0x%08X] TU %f\n", cpc, regs.tu);
+                break;
+            case CMD_TV:
+                regs.tv = toFloat(instr << 8);
+                
+                std::printf("[GE      ] [0x%08X] TV %f\n", cpc, regs.tv);
                 break;
             default:
                 std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
