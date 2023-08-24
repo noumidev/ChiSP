@@ -5,11 +5,14 @@
 
 #include "ge.hpp"
 
+#include <array>
 #include <cassert>
 #include <cstdio>
 
+#include "dmacplus.hpp"
 #include "intc.hpp"
 #include "memory.hpp"
+#include "psp.hpp"
 #include "scheduler.hpp"
 
 namespace psp::ge {
@@ -49,9 +52,15 @@ enum CMDSTATUS {
     ERROR  = 3,
 };
 
+struct FrameBufferConfig {
+    u32 addr, fmt, width, stride, config;
+} __attribute__((packed));
+
 struct Registers {
     u32 base;
 };
+
+std::array<u32, SCR_WIDTH * SCR_HEIGHT> fb;
 
 u32 cmdargs[256];
 
@@ -71,6 +80,8 @@ u32 geoclk;
 u32 unknown[1];
 
 u32 pc, stall;
+
+FrameBufferConfig fbConfig;
 
 Registers regs;
 
@@ -370,6 +381,33 @@ void executeDisplayList() {
     }
 
     control &= ~CONTROL::RUNNING;
+}
+
+void drawScreen() {
+    // Get frame buffer configuration
+    dmacplus::getFBConfig((u32 *)&fbConfig);
+
+    if (!(fbConfig.config & 1) || !fbConfig.width || !fbConfig.stride) { // Scanout disabled
+        std::memset(fb.data(), 0, fb.size());
+
+        update((u8 *)fb.data());
+
+        return;
+    }
+
+    std::printf("[GE      ] FB addr: 0x%08X, format: %u, width: %u, stride: %u\n", fbConfig.addr, fbConfig.fmt, fbConfig.width, fbConfig.stride);
+
+    assert(!fbConfig.fmt); // RGBA8888
+    assert(fbConfig.width == SCR_WIDTH);
+    assert(fbConfig.stride == 512);
+
+    const auto fbBase = memory::getMemoryPointer(fbConfig.addr);
+
+    for (int i = 0; i < SCR_HEIGHT; i++) {
+        std::memcpy(&fb[i * SCR_WIDTH], &fbBase[4 * i * fbConfig.stride], SCR_WIDTH * 4);
+    }
+
+    exit(0);
 }
 
 }
