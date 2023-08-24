@@ -40,7 +40,7 @@ std::array<u8, (u64)MemorySize::DRAM>  dram;
 u8 *resetVector = bootROM.data();
 u32 resetSize = (u32)MemorySize::BootROM;
 
-u32 cpufreq[2], busfreq[2];
+u32 cpufreq[2] = {0x1FF01FF, 0x1FF01FF}, busfreq[2] = {0x1FF01FF, 0x1FF01FF};
 
 // Returns true if addr is in the range base,(base + size)
 bool inRange(u64 addr, u64 base, u64 size) {
@@ -212,7 +212,11 @@ u32 read32(u32 addr) {
 
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::UART0, (u64)MemorySize::UART)) {
-        //std::printf("[UART0   ] Unhandled read @ 0x%08X\n", addr);
+        std::printf("[UART0   ] Unhandled read @ 0x%08X\n", addr);
+
+        if (addr == 0x1E4C0018) {
+            return 0x80;
+        }
 
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::HPRemote, (u64)MemorySize::UART)) {
@@ -229,6 +233,14 @@ u32 read32(u32 addr) {
         return nand::readBuffer32(addr);
     } else {
         switch (addr) {
+            case 0x1C200000:
+                std::printf("[FREQ    ] Read @ CPUFREQ\n");
+
+                return cpufreq[CPUID_CPU];
+            case 0x1C200004:
+                std::printf("[FREQ    ] Read @ BUSFREQ\n");
+
+                return busfreq[CPUID_CPU];
             case 0x1D500000:
                 std::printf("[Memory  ] Unhandled read32 @ EDRAMREFRESH0\n");
                 return 0;
@@ -385,6 +397,16 @@ void write32(u32 addr, u32 data) {
         std::memcpy(&sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)], &data, sizeof(u32));
     } else {
         switch (addr) {
+            case 0x1C200000:
+                std::printf("[FREQ    ] Write @ CPUFREQ = 0x%08X\n", data);
+
+                cpufreq[CPUID_CPU] = data;
+                break;
+            case 0x1C200004:
+                std::printf("[FREQ    ] Write @ BUSFREQ = 0x%08X\n", data);
+
+                busfreq[CPUID_CPU] = data;
+                break;
             case 0x1D500000:
                 std::printf("[Memory  ] Unhandled write32 @ EDRAMREFRESH0 = 0x%08X\n", data);
                 break;
