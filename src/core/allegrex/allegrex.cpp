@@ -69,6 +69,10 @@ void Allegrex::reset() {
     std::printf("[%s] Reset OK\n", typeNames[(int)type]);
 }
 
+bool Allegrex::isME() {
+    return type == Type::MediaEngine;
+}
+
 const char *Allegrex::getTypeName() {
     return typeNames[(int)type];
 }

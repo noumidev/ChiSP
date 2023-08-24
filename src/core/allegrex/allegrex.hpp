@@ -26,6 +26,8 @@ struct Allegrex {
     void init(Type type);
     void reset();
 
+    bool isME();
+
     const char *getTypeName();
 
     u32  get(int idx);
