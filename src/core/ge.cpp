@@ -105,6 +105,81 @@ enum {
     CMD_SV = 0x49,
     CMD_TU = 0x4A,
     CMD_TV = 0x4B,
+    CMD_OFFSETX = 0x4C,
+    CMD_OFFSETY = 0x4D,
+    CMD_SHADE = 0x50,
+    CMD_NREV = 0x51,
+    CMD_MATERIAL = 0x53,
+    CMD_MEC = 0x54,
+    CMD_MAC = 0x55,
+    CMD_MDC = 0x56,
+    CMD_MSC = 0x57,
+    CMD_MAA = 0x58,
+    CMD_MK = 0x5B,
+    CMD_AC = 0x5C,
+    CMD_AA = 0x5D,
+    CMD_LMODE = 0x5E,
+    CMD_LTYPE0 = 0x5F,
+    CMD_LTYPE1 = 0x60,
+    CMD_LTYPE2 = 0x61,
+    CMD_LTYPE3 = 0x62,
+    CMD_LX0 = 0x63,
+    CMD_LY0 = 0x64,
+    CMD_LZ0 = 0x65,
+    CMD_LX1 = 0x66,
+    CMD_LY1 = 0x67,
+    CMD_LZ1 = 0x68,
+    CMD_LX2 = 0x69,
+    CMD_LY2 = 0x6A,
+    CMD_LZ2 = 0x6B,
+    CMD_LX3 = 0x6C,
+    CMD_LY3 = 0x6D,
+    CMD_LZ3 = 0x6E,
+    CMD_LDX0 = 0x6F,
+    CMD_LDY0 = 0x70,
+    CMD_LDZ0 = 0x71,
+    CMD_LDX1 = 0x72,
+    CMD_LDY1 = 0x73,
+    CMD_LDZ1 = 0x74,
+    CMD_LDX2 = 0x75,
+    CMD_LDY2 = 0x76,
+    CMD_LDZ2 = 0x77,
+    CMD_LDX3 = 0x78,
+    CMD_LDY3 = 0x79,
+    CMD_LDZ3 = 0x7A,
+    CMD_LKA0 = 0x7B,
+    CMD_LKB0 = 0x7C,
+    CMD_LKC0 = 0x7D,
+    CMD_LKA1 = 0x7E,
+    CMD_LKB1 = 0x7F,
+    CMD_LKC1 = 0x80,
+    CMD_LKA2 = 0x81,
+    CMD_LKB2 = 0x82,
+    CMD_LKC2 = 0x83,
+    CMD_LKA3 = 0x84,
+    CMD_LKB3 = 0x85,
+    CMD_LKC3 = 0x86,
+    CMD_LKS0 = 0x87,
+    CMD_LKS1 = 0x88,
+    CMD_LKS2 = 0x89,
+    CMD_LKS3 = 0x8A,
+    CMD_LKO0 = 0x8B,
+    CMD_LKO1 = 0x8C,
+    CMD_LKO2 = 0x8D,
+    CMD_LKO3 = 0x8E,
+    CMD_LAC0 = 0x8F,
+    CMD_LDC0 = 0x90,
+    CMD_LSC0 = 0x91,
+    CMD_LAC1 = 0x92,
+    CMD_LDC1 = 0x93,
+    CMD_LSC1 = 0x94,
+    CMD_LAC2 = 0x95,
+    CMD_LDC2 = 0x96,
+    CMD_LSC2 = 0x97,
+    CMD_LAC3 = 0x98,
+    CMD_LDC3 = 0x99,
+    CMD_LSC3 = 0x9A,
+    CMD_CULL = 0x9B,
 };
 
 struct VTYPE {
@@ -129,7 +204,7 @@ struct Registers {
     u32 base;
 
     // Feature enable
-    bool tme, zte;
+    bool tme, zte, iip;
 
     // --- Vertices
 
@@ -139,6 +214,9 @@ struct Registers {
     f32 weight[8];
 
     // --- Coordinates
+
+    // Screen coordinate offset
+    f32 offsetx, offsety;
 
     // Viewport
     f32 s[3], t[3];
@@ -624,6 +702,153 @@ void executeDisplayList() {
                 regs.tv = toFloat(instr << 8);
                 
                 std::printf("[GE      ] [0x%08X] TV %f\n", cpc, regs.tv);
+                break;
+            case CMD_OFFSETX:
+                regs.offsetx = ((f32)(u16)instr) / 16.0;
+
+                std::printf("[GE      ] OFFSETX %f\n", regs.offsetx);
+                break;
+            case CMD_OFFSETY:
+                regs.offsety = ((f32)(u16)instr) / 16.0;
+
+                std::printf("[GE      ] OFFSETY %f\n", regs.offsety);
+                break;
+            case CMD_SHADE:
+                std::printf("[GE      ] [0x%08X] SHADE %u\n", cpc, instr & 1);
+
+                regs.iip = instr & 1;
+                break;
+            case CMD_NREV:
+                std::printf("[GE      ] [0x%08X] NREV %u\n", cpc, instr & 1);
+                break;
+            case CMD_MATERIAL:
+                std::printf("[GE      ] [0x%08X] MATERIAL %u\n", cpc, instr & 7);
+                break;
+            case CMD_MEC:
+                std::printf("[GE      ] [0x%08X] MEC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_MAC:
+                std::printf("[GE      ] [0x%08X] MAC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_MDC:
+                std::printf("[GE      ] [0x%08X] MDC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_MSC:
+                std::printf("[GE      ] [0x%08X] MSC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_MAA:
+                std::printf("[GE      ] [0x%08X] MAA 0x%02X\n", cpc, instr & 0xFF);
+                break;
+            case CMD_MK:
+                std::printf("[GE      ] [0x%08X] MK 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_AC:
+                std::printf("[GE      ] [0x%08X] AC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_AA:
+                std::printf("[GE      ] [0x%08X] AA 0x%02X\n", cpc, instr & 0xFF);
+                break;
+            case CMD_LMODE:
+                std::printf("[GE      ] [0x%08X] LMODE %u\n", cpc, instr & 1);
+                break;
+            case CMD_LTYPE0:
+            case CMD_LTYPE1:
+            case CMD_LTYPE2:
+            case CMD_LTYPE3:
+                std::printf("[GE      ] [0x%08X] LTYPE%d 0x%03X\n", cpc, cmd - CMD_LTYPE0, instr & 0x3FF);
+                break;
+            case CMD_LX0:
+            case CMD_LY0:
+            case CMD_LZ0:
+            case CMD_LX1:
+            case CMD_LY1:
+            case CMD_LZ1:
+            case CMD_LX2:
+            case CMD_LY2:
+            case CMD_LZ2:
+            case CMD_LX3:
+            case CMD_LY3:
+            case CMD_LZ3:
+                {
+                    const auto coord = (cmd - CMD_LX0) % 3;
+                    const auto idx = (cmd - CMD_LX0) / 3;
+
+                    std::printf("[GE      ] [0x%08X] L%c%d %f\n", cpc, 'X' + coord, idx, toFloat(instr << 8));
+                }
+                break;
+            case CMD_LDX0:
+            case CMD_LDY0:
+            case CMD_LDZ0:
+            case CMD_LDX1:
+            case CMD_LDY1:
+            case CMD_LDZ1:
+            case CMD_LDX2:
+            case CMD_LDY2:
+            case CMD_LDZ2:
+            case CMD_LDX3:
+            case CMD_LDY3:
+            case CMD_LDZ3:
+                {
+                    const auto coord = (cmd - CMD_LDX0) % 3;
+                    const auto idx = (cmd - CMD_LDX0) / 3;
+
+                    std::printf("[GE      ] [0x%08X] LD%c%d %f\n", cpc, 'X' + coord, idx, toFloat(instr << 8));
+                }
+                break;
+            case CMD_LKA0:
+            case CMD_LKB0:
+            case CMD_LKC0:
+            case CMD_LKA1:
+            case CMD_LKB1:
+            case CMD_LKC1:
+            case CMD_LKA2:
+            case CMD_LKB2:
+            case CMD_LKC2:
+            case CMD_LKA3:
+            case CMD_LKB3:
+            case CMD_LKC3:
+                {
+                    const auto coord = (cmd - CMD_LKA0) % 3;
+                    const auto idx = (cmd - CMD_LKA0) / 3;
+
+                    std::printf("[GE      ] [0x%08X] LK%c%d %f\n", cpc, 'A' + coord, idx, toFloat(instr << 8));
+                }
+                break;
+            case CMD_LKS0:
+            case CMD_LKS1:
+            case CMD_LKS2:
+            case CMD_LKS3:
+                std::printf("[GE      ] [0x%08X] LKS%d %f\n", cpc, cmd - CMD_LKS0, toFloat(instr << 8));
+                break;
+            case CMD_LKO0:
+            case CMD_LKO1:
+            case CMD_LKO2:
+            case CMD_LKO3:
+                std::printf("[GE      ] [0x%08X] LKO%d %f\n", cpc, cmd - CMD_LKO0, toFloat(instr << 8));
+                break;
+            case CMD_LAC0:
+            case CMD_LDC0:
+            case CMD_LSC0:
+            case CMD_LAC1:
+            case CMD_LDC1:
+            case CMD_LSC1:
+            case CMD_LAC2:
+            case CMD_LDC2:
+            case CMD_LSC2:
+            case CMD_LAC3:
+            case CMD_LDC3:
+            case CMD_LSC3:
+                {
+                    constexpr char comp[3] = {'A', 'D', 'S'};
+
+                    const auto compIdx = (cmd - CMD_LAC0) % 3;
+                    const auto idx = (cmd - CMD_LAC0) / 3;
+
+                    std::printf("[GE      ] [0x%08X] L%cC%d %f\n", cpc, comp[compIdx], idx, toFloat(instr << 8));
+                }
+                break;
+            case CMD_CULL:
+                std::printf("[GE      ] [0x%08X] CULL %u\n", cpc, instr & 1);
                 break;
             default:
                 std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
