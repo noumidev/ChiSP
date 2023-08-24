@@ -171,6 +171,14 @@ u32 read32(u32 addr) {
         return systime::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::DMACplus, (u64)MemorySize::DMACplus)) {
         return dmacplus::read(addr);
+    } else if (inRange(addr, (u64)MemoryBase::DMAC0, (u64)MemorySize::DMAC)) {
+        std::printf("[DMAC    ] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
+    } else if (inRange(addr, (u64)MemoryBase::DMAC1, (u64)MemorySize::DMAC)) {
+        std::printf("[DMAC    ] Unhandled read @ 0x%08X\n", addr);
+
+        return 0;
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
@@ -353,6 +361,10 @@ void write32(u32 addr, u32 data) {
         return systime::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DMACplus, (u64)MemorySize::DMACplus)) {
         return dmacplus::write(addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::DMAC0, (u64)MemorySize::DMAC)) {
+        std::printf("[DMAC    ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::DMAC1, (u64)MemorySize::DMAC)) {
+        std::printf("[DMAC    ] Unhandled write @ 0x%08X = 0x%08X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::DDR, (u64)MemorySize::DDR)) {
         return ddr::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::NAND, (u64)MemorySize::NAND)) {
@@ -458,7 +470,9 @@ void write128(u32 addr, u8 *data) {
 
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+    if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
+        std::memcpy(&edram[addr & ((u32)MemorySize::EDRAM - 1)], data, 4 * sizeof(u32));
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         std::memcpy(&dram[addr & ((u32)MemorySize::DRAM - 1)], data, 4 * sizeof(u32));
     } else {
         std::printf("Unhandled write128 @ 0x%08X = 0x%08X%08X%08X%08X\n", addr, *(u32 *)&data[0], *(u32 *)&data[4], *(u32 *)&data[8], *(u32 *)&data[12]);
