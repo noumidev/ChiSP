@@ -11,7 +11,7 @@
 
 namespace psp::scheduler {
 
-constexpr i64 MAX_RUN_CYCLES = 64;
+constexpr i64 MAX_RUN_CYCLES = 256;
 
 // Scheduler event
 struct Event {
