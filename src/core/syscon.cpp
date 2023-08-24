@@ -79,6 +79,7 @@ enum class SysConCommand {
     GET_WAKE_UP_FACTOR = 0x0E,
     GET_WAKE_UP_REQ = 0x0F,
     GET_TIMESTAMP = 0x11,
+    WRITE_SCRATCHPAD = 0x23,
     READ_SCRATCHPAD  = 0x24,
     SEND_SETPARAM = 0x25,
     RECEIVE_SETPARAM = 0x26,
@@ -216,7 +217,7 @@ void commonRead(SysConCommand cmd) {
         case SysConCommand::GET_KERNEL_DIGITAL_KEY:
             std::puts("[SysCon  ] Get Kernel Digital Key");
 
-            data = 0x400000; // NOT WLAN switch??
+            data = 0x600000; // NOT WLAN switch??
             break;
         case SysConCommand::READ_CLOCK:
             std::puts("[SysCon  ] Read Clock");
@@ -377,6 +378,21 @@ void cmdReadScratchpad() {
     }
 }
 
+void cmdWriteScratchpad() {
+    const auto in = getTxQueue();
+
+    const auto dest = in >> 2;
+    const auto size = 1 << (in & 3);
+
+    std::printf("[SysCon  ] Write Scratchpad - Destination: 0x%02X, size: %d\n", dest, size);
+
+    writeResponse(0);
+
+    for (int i = 0; i < size; i++) {
+        scratchpad[dest + i] = getTxQueue();
+    }
+}
+
 void cmdReceiveSetparam() {
     std::printf("[SysCon  ] Receive Setparam\n");
 
@@ -451,6 +467,9 @@ void doCommand() {
             break;
         case SysConCommand::GET_TIMESTAMP:
             cmdGetTimestamp();
+            break;
+        case SysConCommand::WRITE_SCRATCHPAD:
+            cmdWriteScratchpad();
             break;
         case SysConCommand::READ_SCRATCHPAD:
             cmdReadScratchpad();
