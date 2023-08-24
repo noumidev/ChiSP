@@ -87,6 +87,7 @@ enum class SysConCommand {
     RESET_DEVICE = 0x32,
     CTRL_ANALOG_XY_POLLING = 0x33,
     CTRL_HR_POWER = 0x34,
+    POWER_SUSPEND = 0x36,
     CTRL_VOLTAGE  = 0x42,
     GET_POWER_STATUS = 0x46,
     CTRL_LED = 0x47,
@@ -217,7 +218,7 @@ void commonRead(SysConCommand cmd) {
         case SysConCommand::GET_KERNEL_DIGITAL_KEY:
             std::puts("[SysCon  ] Get Kernel Digital Key");
 
-            data = 0x600000; // NOT WLAN switch??
+            data = 0xFFEF7FFF; // Value from my PSP
             break;
         case SysConCommand::READ_CLOCK:
             std::puts("[SysCon  ] Read Clock");
@@ -283,6 +284,9 @@ void commonWrite(SysConCommand cmd) {
             } else {
                 baryonStatus &= ~BaryonStatus::HR_POWER;
             }
+            break;
+        case SysConCommand::POWER_SUSPEND:
+            std::puts("[SysCon  ] Power Suspend");
             break;
         case SysConCommand::CTRL_VOLTAGE:
             std::puts("[SysCon  ] Ctrl Voltage");
@@ -492,6 +496,9 @@ void doCommand() {
         case SysConCommand::CTRL_HR_POWER:
             commonWrite(SysConCommand::CTRL_HR_POWER);
             break;
+        case SysConCommand::POWER_SUSPEND:
+            commonWrite(SysConCommand::POWER_SUSPEND);
+            break;
         case SysConCommand::CTRL_VOLTAGE:
             commonWrite(SysConCommand::CTRL_VOLTAGE);
             break;
@@ -548,7 +555,7 @@ void finishCommand() {
 void init() {
     idFinishCommand = scheduler::registerEvent([](int) {finishCommand();});
 
-    baryonStatus = BaryonStatus::ALARM;
+    baryonStatus = BaryonStatus::ALARM | BaryonStatus::AC_POWER;
 }
 
 u32 read(int cpuID, u32 addr) {
