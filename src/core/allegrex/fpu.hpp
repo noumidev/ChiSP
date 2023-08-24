@@ -41,6 +41,7 @@ private:
     void iDIV(u32 instr);
     void iMOV(u32 instr);
     void iMUL(u32 instr);
+    void iNEG(u32 instr);
     void iSQRT(u32 instr);
     void iSUB(u32 instr);
     void iTRUNCW(u32 instr);

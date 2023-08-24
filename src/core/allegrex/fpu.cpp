@@ -21,6 +21,7 @@ enum class SingleOpcode {
     DIV = 0x03,
     SQRT = 0x04,
     MOV = 0x06,
+    NEG = 0x07,
     TRUNCW = 0x0D,
     C = 0x30,
 };
@@ -171,6 +172,18 @@ void FPU::iMUL(u32 instr) {
     }
 }
 
+/* NEGate */
+void FPU::iNEG(u32 instr) {
+    const auto fd = getFd(instr);
+    const auto fs = getFs(instr);
+
+    setF32(fd, -getF32(fs));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] NEG.S F%u, F%u; F%u = %f\n", fpuName[cpuID], fd, fs, fd, getF32(fd));
+    }
+}
+
 /* SQuare RooT */
 void FPU::iSQRT(u32 instr) {
     const auto fd = getFd(instr);
@@ -229,6 +242,9 @@ void FPU::doSingle(u32 instr) {
             break;
         case SingleOpcode::MOV:
             iMOV(instr);
+            break;
+        case SingleOpcode::NEG:
+            iNEG(instr);
             break;
         case SingleOpcode::TRUNCW:
             iTRUNCW(instr);
