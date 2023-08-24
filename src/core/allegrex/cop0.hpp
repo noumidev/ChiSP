@@ -62,7 +62,8 @@ private:
     u32 cpuID;
     u32 count, oldCount, compare;
     u32 status, cause;
-    u32 epc;
+    u32 badvaddr;
+    u32 epc, errorEPC;
     u32 scCode;
     u32 ebase;
     u32 tagLo, tagHi;

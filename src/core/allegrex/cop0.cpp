@@ -19,17 +19,20 @@ const char *cop0Name[] = {
 };
 
 enum class StatusReg {
+    BadVaddr = 0x08,
     Count   = 0x09,
     Compare = 0x0B,
     Status = 0x0C,
     Cause  = 0x0D,
     EPC = 0x0E,
+    PRId = 0x0F,
     Config = 0x10,
     SCCode = 0x15,
     CPUId = 0x16,
     EBase = 0x19,
     TagLo = 0x1C,
     TagHi = 0x1D,
+    ErrorEPC = 0x1E,
 };
 
 enum Cause {
@@ -69,6 +72,8 @@ void COP0::setControl(int idx, u32 data) {
 
 u32 COP0::getStatus(int idx) {
     switch ((StatusReg)idx) {
+        case StatusReg::BadVaddr:
+            return badvaddr;
         case StatusReg::Count:
             return count;
         case StatusReg::Compare:
@@ -79,6 +84,8 @@ u32 COP0::getStatus(int idx) {
             return cause;
         case StatusReg::EPC:
             return epc;
+        case StatusReg::PRId:
+            return cpuID;
         case StatusReg::Config:
             return CONFIG;
         case StatusReg::SCCode:
@@ -91,6 +98,8 @@ u32 COP0::getStatus(int idx) {
             return tagLo;
         case StatusReg::TagHi:
             return tagHi;
+        case StatusReg::ErrorEPC:
+            return errorEPC;
         default:
             std::printf("Unhandled %s status read @ %d\n", cop0Name[cpuID], idx);
 
