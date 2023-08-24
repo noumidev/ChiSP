@@ -34,6 +34,7 @@ set(SOURCES
     src/core/allegrex/cop0.cpp
     src/core/allegrex/fpu.cpp
     src/core/allegrex/interpreter.cpp
+    src/core/allegrex/vfpu.cpp
     src/core/crypto/kirk.cpp
     src/core/crypto/spock.cpp
 )
@@ -60,6 +61,7 @@ set(HEADERS
     src/core/allegrex/cop0.hpp
     src/core/allegrex/fpu.hpp
     src/core/allegrex/interpreter.hpp
+    src/core/allegrex/vfpu.hpp
     src/core/crypto/kirk.hpp
     src/core/crypto/spock.hpp
 )
