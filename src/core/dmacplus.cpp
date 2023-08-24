@@ -139,6 +139,8 @@ void doTransfer(int chnID) {
 void init() {
     idFinishTransfer = scheduler::registerEvent([](int chnID) {finishTransfer(chnID);});
     idFinishScanout  = scheduler::registerEvent([](int) {finishScanout();});
+
+    irqen = 0x1F;
 }
 
 u32 read(u32 addr) {
