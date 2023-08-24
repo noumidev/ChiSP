@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <cstring>
 
 using u8  = std::uint8_t;
 using u16 = std::uint16_t;
@@ -19,3 +20,10 @@ using i64 = std::int64_t;
 
 using f32 = float;
 using f64 = double;
+
+inline f32 toFloat(u32 data) {
+    f32 f;
+    std::memcpy(&f, &data, sizeof(u32));
+
+    return f;
+}
