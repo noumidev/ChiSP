@@ -336,27 +336,30 @@ void executeDisplayList() {
                 std::printf("Unhandled GE command 0x%02X (0x%08X) @ 0x%08X\n", cmd, instr, cpc);
 
                 exit(0);
+            case 0x04:
+                std::printf("[GE      ] [0x%08X] PRIM %u, %u\n", cpc, (instr >> 16) & 7, instr & 0xFFFF);
+                break;
             case 0x08:
                 pc = regs.base | (instr & 0xFFFFFF);
 
-                std::printf("[GPU     ] [0x%08X] JUMP 0x%08X\n", cpc, pc);
+                std::printf("[GE      ] [0x%08X] JUMP 0x%08X\n", cpc, pc);
                 break;
             case 0x0C:
                 std::printf("[GE      ] [0x%08X] END\n", cpc);
 
                 isEnd = true;
 
-                scheduler::addEvent(idSendIRQ, CMDSTATUS::END, 5 * count);
+                scheduler::addEvent(idSendIRQ, CMDSTATUS::END, (count) ? 5 * count : 128);
                 break;
             case 0x0F:
                 std::printf("[GE      ] [0x%08X] FINISH\n", cpc);
 
-                scheduler::addEvent(idSendIRQ, CMDSTATUS::FINISH, 5 * count);
+                scheduler::addEvent(idSendIRQ, CMDSTATUS::FINISH, (count) ? 5 * count : 128);
                 break;
             case 0x10:
                 regs.base = (instr & 0xFF0000) << 8;
 
-                std::printf("[GPU     ] [0x%08X] BASE 0x%08X\n", cpc, regs.base);
+                std::printf("[GE      ] [0x%08X] BASE 0x%08X\n", cpc, regs.base);
                 break;
             default: // Ignore "unimportant" commands
                 std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
