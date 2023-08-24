@@ -34,6 +34,10 @@ u32 read(u32 addr) {
             std::printf("[DDR     ] Unknown read @ 0x%08X\n", addr);
 
             return unknown[0];
+        case DDRReg::UNKNOWN2:
+            std::printf("[DDR     ] Unknown read @ 0x%08X\n", addr);
+
+            return unknown[2];
         case DDRReg::UNKNOWN3:
             std::printf("[DDR     ] Unknown read @ 0x%08X\n", addr);
 
