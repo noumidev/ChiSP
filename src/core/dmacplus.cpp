@@ -67,7 +67,7 @@ u32 csc[17];
 // Sc2Me, Me2Sc, Sc128
 Channel channels[3];
 
-u64 idFinishTransfer, idFinishScanout;
+u64 idFinishTransfer;
 
 void checkInterrupt() {
     if (irqstatus & irqen) {
@@ -93,12 +93,6 @@ void finishTransfer(int chnID) {
     if (chn.triggerIRQ) {
         sendIRQ(chnID + 2); // Skip LCDC and AVC channels
     }
-}
-
-void finishScanout() {
-    std::puts("[DMACplus] LCDC end");
-
-    sendIRQ(0);
 }
 
 void doTransfer(int chnID) {
@@ -138,7 +132,6 @@ void doTransfer(int chnID) {
 
 void init() {
     idFinishTransfer = scheduler::registerEvent([](int chnID) {finishTransfer(chnID);});
-    idFinishScanout  = scheduler::registerEvent([](int) {finishScanout();});
 
     irqen = 0x1F;
 }
@@ -337,10 +330,12 @@ void write(u32 addr, u32 data) {
     }
 }
 
-void doScanout() {
-    if (framebufconfig & FRAMEBUFCONFIG::ENABLE_SCANOUT) {
-        //scheduler::addEvent(idFinishScanout, 0, 480 * 272 / 4);
-    }
+void getFBConfig(u32 *data) {
+    data[0] = framebufaddr;
+    data[1] = framebuffmt;
+    data[2] = framebufwidth;
+    data[3] = framebufstride;
+    data[4] = framebufconfig;
 }
 
 }
