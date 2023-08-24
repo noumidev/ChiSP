@@ -52,12 +52,42 @@ enum CMDSTATUS {
     ERROR  = 3,
 };
 
+enum {
+    CMD_NOP = 0x00,
+    CMD_VADR = 0x01,
+    CMD_IADR = 0x02,
+    CMD_PRIM = 0x04,
+    CMD_JUMP = 0x08,
+    CMD_END = 0x0C,
+    CMD_FINISH = 0x0F,
+    CMD_BASE = 0x10,
+    CMD_VTYPE = 0x12,
+    CMD_OFFSET = 0x13,
+    CMD_ORIGIN = 0x14,
+    CMD_REGION1 = 0x15,
+    CMD_REGION2 = 0x16,
+};
+
+struct VTYPE {
+    u32 tt; // Tex coord type
+    u32 ct; // Color type
+    u32 nt; // Normal type
+    u32 vt; // Model coordinate type
+    u32 wt; // Weight type
+    u32 it; // Index type
+    u32 wc; // Weight count
+    u32 mc;
+    bool tru;
+};
+
 struct FrameBufferConfig {
     u32 addr, fmt, width, stride, config;
 } __attribute__((packed));
 
 struct Registers {
     u32 base;
+
+    VTYPE vtype;
 };
 
 std::array<u32, SCR_WIDTH * SCR_HEIGHT> fb;
@@ -340,41 +370,79 @@ void executeDisplayList() {
         pc += 4;
 
         switch (cmd) {
-            case 0x09:
-            case 0x0A:
-            case 0x0B:
-            case 0x0E:
-                std::printf("Unhandled GE command 0x%02X (0x%08X) @ 0x%08X\n", cmd, instr, cpc);
+            case CMD_NOP:
+                std::printf("[GE      ] [0x%08X] NOP\n", cpc);
+                break;
+            case CMD_VADR:
+                vtxaddr = regs.base | (instr & 0xFFFFFF);
+
+                std::printf("[GE      ] [0x%08X] VADR 0x%08X\n", cpc, vtxaddr);
+                break;
+            case CMD_IADR:
+                idxaddr = regs.base | (instr & 0xFFFFFF);
+
+                std::printf("[GE      ] [0x%08X] IADR 0x%08X\n", cpc, idxaddr);
+                break;
+            case CMD_PRIM:
+                std::printf("[GE      ] [0x%08X] PRIM %u, %u\n", cpc, (instr >> 16) & 7, instr & 0xFFFF);
 
                 exit(0);
-            case 0x04:
-                std::printf("[GE      ] [0x%08X] PRIM %u, %u\n", cpc, (instr >> 16) & 7, instr & 0xFFFF);
-                break;
-            case 0x08:
+            case CMD_JUMP:
                 pc = regs.base | (instr & 0xFFFFFF);
 
                 std::printf("[GE      ] [0x%08X] JUMP 0x%08X\n", cpc, pc);
                 break;
-            case 0x0C:
+            case CMD_END:
                 std::printf("[GE      ] [0x%08X] END\n", cpc);
 
                 isEnd = true;
 
                 scheduler::addEvent(idSendIRQ, CMDSTATUS::END, (count) ? 5 * count : 128);
                 break;
-            case 0x0F:
+            case CMD_FINISH:
                 std::printf("[GE      ] [0x%08X] FINISH\n", cpc);
 
                 scheduler::addEvent(idSendIRQ, CMDSTATUS::FINISH, (count) ? 5 * count : 128);
                 break;
-            case 0x10:
+            case CMD_BASE:
                 regs.base = (instr & 0xFF0000) << 8;
 
                 std::printf("[GE      ] [0x%08X] BASE 0x%08X\n", cpc, regs.base);
                 break;
-            default: // Ignore "unimportant" commands
-                std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
+            case CMD_VTYPE:
+                {
+                    auto vtype = &regs.vtype;
+
+                    std::printf("[GE      ] [0x%08X] VTYPE 0x%06X\n", cpc, instr & 0xFFFFFF);
+
+                    vtype->tt = (instr >>  0) & 3;
+                    vtype->ct = (instr >>  2) & 7;
+                    vtype->nt = (instr >>  5) & 3;
+                    vtype->vt = (instr >>  7) & 3;
+                    vtype->wt = (instr >>  9) & 3;
+                    vtype->it = (instr >> 11) & 3;
+                    vtype->wc = (instr >> 14) & 7;
+                    vtype->mc = (instr >> 18) & 7;
+
+                    vtype->tru = instr & (1 << 23);
+                }
                 break;
+            case CMD_OFFSET:
+                std::printf("[GE      ] [0x%08X] OFFSET 0x%08X\n", cpc, (instr & 0xFFFFFF) << 8);
+                break;
+            case CMD_ORIGIN:
+                std::printf("[GE      ] [0x%08X] ORIGIN\n", cpc);
+                break;
+            case CMD_REGION1:
+                std::printf("[GE      ] [0x%08X] REGION1 0x%05X\n", cpc, instr & 0xFFFFF);
+                break;
+            case CMD_REGION2:
+                std::printf("[GE      ] [0x%08X] REGION2 0x%05X\n", cpc, instr & 0xFFFFF);
+                break;
+            default:
+                std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
+
+                exit(0);
         }
 
         ++count;
@@ -403,7 +471,7 @@ void drawScreen() {
 
     const auto fbBase = memory::getMemoryPointer(fbConfig.addr);
 
-    for (int i = 0; i < SCR_HEIGHT; i++) {
+    for (int i = 0; i < (int)SCR_HEIGHT; i++) {
         std::memcpy(&fb[i * SCR_WIDTH], &fbBase[4 * i * fbConfig.stride], SCR_WIDTH * 4);
     }
 
