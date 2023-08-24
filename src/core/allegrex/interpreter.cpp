@@ -133,6 +133,7 @@ enum class SPECIAL3 {
 };
 
 enum class BSHFL {
+    WSBH = 0x02,
     WSBW = 0x03,
     SEB = 0x10,
     BITREV = 0x14,
@@ -1788,6 +1789,20 @@ void iXORI(Allegrex *allegrex, u32 instr) {
     }
 }
 
+/* Word Swap Bytes within Halfword */
+void iWSBH(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+    
+    const auto t = allegrex->get(rt);
+
+    allegrex->set(rd, ((t & 0xFF) << 8) | ((t & 0xFF00) >> 8) | ((t & 0xFF0000) << 8) | ((t & 0xFF000000) >> 8));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] WSBH %s, %s; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], regNames[rd], allegrex->get(rd));
+    }
+}
+
 /* Word Swap Bytes within Word */
 void iWSBW(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -2185,6 +2200,9 @@ i64 doInstr(Allegrex *allegrex) {
                             const auto shamt = getShamt(instr);
 
                             switch ((BSHFL)shamt) {
+                                case BSHFL::WSBH:
+                                    iWSBH(allegrex, instr);
+                                    break;
                                 case BSHFL::WSBW:
                                     iWSBW(allegrex, instr);
                                     break;
