@@ -2417,68 +2417,6 @@ void run(Allegrex *allegrex, i64 runCycles) {
 
         cpc = allegrex->getPC();
 
-        if (cpc == 0x04007DE8) allegrex->set(Reg::V0, 0); // I still need this hack :(
-
-        if (cpc == 0x880629CC) {
-            std::puts("InitThreadEntry");
-
-            bootInfo = (SceLoadCoreBootInfo *)memory::getMemoryPointer(memory::read32(allegrex->get(Reg::A1) + 4));
-
-            printModules();
-        }
-
-        if (cpc == 0x880402EC) {
-            //printModules();
-        }
-
-        if (cpc == 0x88030408) {
-            std::printf("[PSP     ] [0x%08X] sceKernelDelayThread - Delay: %u\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0));
-        }
-
-        if (cpc == 0x88030890) {
-            std::printf("[PSP     ] [0x%08X] sceKernelCreateSema - Name: %s\n", allegrex->get(Reg::RA), memory::getMemoryPointer(allegrex->get(Reg::A0)));
-        }
-
-        if (cpc == 0x88087240) {
-            std::printf("[PSP     ] [0x%08X] sceSysconCmdSync - Packet*: 0x%08X, noWait: %d\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0), allegrex->get(Reg::A1));
-
-            sysconCmdSyncRet = allegrex->get(Reg::RA);
-        } 
-
-        if (cpc == sysconCmdSyncRet) {
-            std::printf("[PSP     ] sceSysconCmdSync result: %d\n", allegrex->get(Reg::V0));
-        }
-
-        if (cpc == 0x8807D1B4) {
-            std::printf("[PSP     ] sceIdStorageLookup - ID: %u, offset: %u, buf*: 0x%08X, len: 0x%X\n", allegrex->get(Reg::A0), allegrex->get(Reg::A1), allegrex->get(Reg::A2), allegrex->get(Reg::A3));
-
-            idStorageLookupRet = allegrex->get(Reg::RA);
-        }
-
-        if (cpc == idStorageLookupRet) {
-            std::puts("[PSP     ] sceIdStorageLookup end");
-        }
-
-        if (cpc == 0x8807368C) {
-            std::printf("[PSP     ] [0x%08X] sceNandLock - Mode: %u\n", allegrex->get(Reg::RA), allegrex->get(Reg::A0));
-        }
-
-        if (cpc == 0x8807370C) {
-            std::printf("[PSP     ] [0x%08X] sceNandUnlock\n", allegrex->get(Reg::RA));
-        }
-
-        if (cpc == 0x8800B550) {
-            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A0));
-
-            std::printf("[PSPDEBUG] %s", msgPtr);
-        }
-
-        if (cpc == 0x8802C3B0) { // Kernel printf hook
-            const auto msgPtr = memory::getMemoryPointer(allegrex->get(Reg::A0));
-
-            std::printf("[PSPDEBUG] %s\n", msgPtr);
-        }
-
         allegrex->advanceDelay();
 
         i += doInstr(allegrex);
