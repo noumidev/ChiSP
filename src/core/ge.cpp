@@ -8,6 +8,7 @@
 #include <array>
 #include <cassert>
 #include <cstdio>
+#include <vector>
 
 #include "dmacplus.hpp"
 #include "intc.hpp"
@@ -16,6 +17,8 @@
 #include "scheduler.hpp"
 
 namespace psp::ge {
+
+constexpr auto ENABLE_DEBUG_PRINT = true;
 
 enum class GEReg {
     UNKNOWN0 = 0x1D400004,
@@ -271,6 +274,28 @@ enum {
 };
 
 enum {
+    PRIM_POINT,
+    PRIM_LINE,
+    PRIM_LINESTRIP,
+    PRIM_TRIANGLE,
+    PRIM_TRIANGLESTRIP,
+    PRIM_TRIANGLEFAN,
+    PRIM_SPRITE,
+    PRIM_RESERVED,
+};
+
+const char *primNames[] {
+    "Point",
+    "Line",
+    "LineStrip",
+    "Triangle",
+    "TriangleStrip",
+    "TriangleFan",
+    "Sprite",
+    "Reserved",
+};
+
+enum {
     CLUT_CPF_RGB565,
     CLUT_CPF_RGBA5551,
     CLUT_CPF_RGBA4444,
@@ -370,6 +395,23 @@ struct Registers {
 
     // --- CLEAR mode
     bool set, cen, aen, zen;
+};
+
+struct Vertex {
+    // Weights
+    f32 w[8];
+
+    // Tex coords
+    f32 s, t;
+
+    // Color
+    f32 c[4];
+
+    // Normal vector
+    f32 n[3];
+
+    // Model coordinate (X, Y, Z, W)
+    f32 m[4];
 };
 
 std::array<u32, SCR_WIDTH * SCR_HEIGHT> fb;
@@ -631,6 +673,74 @@ void write(u32 addr, u32 data) {
     }
 }
 
+void transform3(f32 *mtx, Vertex *vtxList, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        const auto vtx = &vtxList[i];
+
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Vertex %u transform\n", i);
+
+        f32 w[3];
+
+        // Multiply model coordinates by matrix
+        for (int j = 0; j < 3; j++) {
+            w[j] = mtx[j] * vtx->m[0] + mtx[j + 3] * vtx->m[1] + mtx[j + 6] * vtx->m[2];
+        }
+
+        // Add translation vector
+        for (int j = 0; j < 3; j++) {
+            vtx->m[j] = w[j] + mtx[9 + j];
+        }
+
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] X: %f, Y: %f, Z: %f\n", vtx->m[0], vtx->m[1], vtx->m[2]);
+    }
+}
+
+void transform4(f32 *mtx, Vertex *vtxList, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        const auto vtx = &vtxList[i];
+
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Vertex %u transform\n", i);
+
+        f32 w[4];
+
+        // Multiply model coordinates by matrix
+        for (int j = 0; j < 4; j++) {
+            w[j] = mtx[j] * vtx->m[0] + mtx[j + 4] * vtx->m[1] + mtx[j + 8] * vtx->m[2] + mtx[j + 12] * 1.0;
+        }
+
+        std::memcpy(vtx->m, w, sizeof(w));
+
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] X: %f, Y: %f, Z: %f, W: %f\n", vtx->m[0], vtx->m[1], vtx->m[2], vtx->m[3]);
+    }
+}
+
+void transformViewport(f32 *s, f32 *t, Vertex *vtxList, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        const auto vtx = &vtxList[i];
+
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Vertex %u viewport transform\n", i);
+
+        for (int j = 0; j < 3; j++) {
+            vtx->m[j] = s[j] * vtx->m[j] / vtx->m[3] + t[j];
+        }
+
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] X: %f, Y: %f, Z: %f\n", vtx->m[0], vtx->m[1], vtx->m[2]);
+    }
+}
+
+void transformDisplay(f32 offsetx, f32 offsety, Vertex *vtxList, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        const auto vtx = &vtxList[i];
+
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Vertex %u display transform\n", i);
+
+        vtx->m[0] -= offsetx;
+        vtx->m[1] -= offsety;
+
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] X: %f, Y: %f, Z: %f\n", vtx->m[0], vtx->m[1], vtx->m[2]);
+    }
+}
+
 void loadCLUT() {
     if (!regs.np) return;
 
@@ -657,6 +767,145 @@ void loadCLUT() {
 
             std::printf("[GPU     ] CLUT[0x%03X] = 0x%08X\n", index, clut[index]);
         }
+    }
+}
+
+void drawPrim(u32 prim, u32 count) {
+    if (!count) {
+        std::puts("[GE      ] Primitive count of 0");
+
+        return;
+    }
+
+    // Fetch vertex list
+    std::vector<Vertex> vtxList;
+    vtxList.resize(count);
+
+    auto vtxAddr = vtxaddr;
+
+    const auto &vtype = regs.vtype;
+
+    assert(!vtype.it);
+
+    for (u32 i = 0; i < count; i++) {
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Fetching vertex %u\n", i);
+
+        const auto vtx = &vtxList[i];
+
+        // Fetch weights
+        switch (vtype.wt) {
+            case 0: // None
+                break;
+            default:
+                std::printf("Unhandled weight type %u\n", vtype.tt);
+
+                exit(0);
+        }
+
+        // Fetch tex coords
+        switch (vtype.tt) {
+            case 0: // None
+                break;
+            case 2: // 16-bit unsigned
+                vtx->s = (f32)(i16)memory::read16(vtxAddr + 0);
+                vtx->t = (f32)(i16)memory::read16(vtxAddr + 2);
+
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] S: %f, T: %f\n", vtx->s, vtx->t);
+
+                vtxAddr += 4;
+                break;
+            case 3: // float32
+                vtx->s = toFloat(memory::read32(vtxAddr + 0));
+                vtx->t = toFloat(memory::read32(vtxAddr + 4));
+
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] S: %f, T: %f\n", vtx->s, vtx->t);
+
+                vtxAddr += 8;
+                break;
+            default:
+                std::printf("Unhandled texture coordinate type %u\n", vtype.tt);
+
+                exit(0);
+        }
+
+        u32 c;
+        // Fetch colors
+        switch (vtype.ct) {
+            case 0: // None
+                for (int j = 0; j < 4; j++) {
+                    vtx->c[j] = 0.0;
+                }
+                break;
+            case 7: // RGBA8888
+                c = memory::read32(vtxAddr);
+
+                for (int j = 0; j < 4; j++) {
+                    vtx->c[j] = (f32)(u8)(c >> (8 * j));
+                }
+
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] R: %f, G: %f, B: %f, A: %f\n", vtx->c[0], vtx->c[1], vtx->c[2], vtx->c[3]);
+
+                vtxAddr += 4;
+                break;
+            default:
+                std::printf("Unhandled color type %u\n", vtype.ct);
+
+                exit(0);
+        }
+
+        // Fetch normals
+        switch (vtype.nt) {
+            case 0: // None
+                break;
+            default:
+                std::printf("Unhandled normal type %u\n", vtype.nt);
+
+                exit(0);
+        }
+        
+        // Fetch model coordinates
+        switch (vtype.vt) {
+            case 2: // Signed 16-bit fixed point
+                for (int j = 0; j < 3; j++) {
+                    vtx->m[j] = ((f32)(i16)memory::read16(vtxAddr + 2 * j));
+                }
+
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] X: %f, Y: %f, Z: %f\n", vtx->m[0], vtx->m[1], vtx->m[2]);
+
+                vtxAddr += 8;
+                break;
+            case 3:
+                for (int j = 0; j < 3; j++) {
+                    vtx->m[j] = toFloat(memory::read32(vtxAddr + 4 * j));
+                }
+
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] X: %f, Y: %f, Z: %f\n", vtx->m[0], vtx->m[1], vtx->m[2]);
+
+                vtxAddr += 12;
+                break;
+            default:
+                std::printf("Unhandled model coordinate type %u\n", vtype.vt);
+
+                exit(0);
+        }
+    }
+
+    // Transform vertex coordinates
+    // Note: sprite coordinates are already in the display coordinate system!!
+    if (!vtype.tru && (prim != PRIM_SPRITE)) {
+        transform3(world, vtxList.data(), count);
+        transform3(view , vtxList.data(), count);
+        transform4(proj , vtxList.data(), count);
+        transformViewport(regs.s, regs.t, vtxList.data(), count);
+    }
+
+    if (prim != PRIM_SPRITE) transformDisplay(regs.offsetx, regs.offsety, vtxList.data(), count);
+
+    switch (prim) {
+        default:
+            std::printf("Unhandled primitive %s\n", primNames[prim]);
+
+            exit(0);
     }
 }
 
@@ -702,11 +951,7 @@ void executeDisplayList() {
             case CMD_PRIM:
                 std::printf("[GE      ] [0x%08X] PRIM %u, %u\n", cpc, (instr >> 16) & 7, instr & 0xFFFF);
 
-                if (instr != 0x04000000) {
-                    std::puts("PRIM!!!!");
-
-                    exit(0);
-                }
+                drawPrim((instr >> 16) & 7, instr & 0xFFFF);
                 break;
             case CMD_JUMP:
                 pc = regs.base | (instr & 0xFFFFFF);
