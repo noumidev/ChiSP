@@ -11,11 +11,14 @@
 #include <cstring>
 
 #include "allegrex.hpp"
+#include "vfpu.hpp"
+
 #include "../memory.hpp"
 
 namespace psp::allegrex::interpreter {
 
 constexpr auto ENABLE_DISASM = false;
+constexpr auto ENABLE_VFPU_DISASM = true;
 
 enum Reg {
     R0 =  0, AT =  1, V0 =  2, V1 =  3,
@@ -56,6 +59,7 @@ enum class Opcode {
     LUI  = 0x0F,
     COP0 = 0x10,
     COP1 = 0x11,
+    COP2 = 0x12,
     BEQL = 0x14,
     BNEL = 0x15,
     BLEZL = 0x16,
@@ -77,6 +81,7 @@ enum class Opcode {
     CACHE = 0x2F,
     LWC1  = 0x31,
     SWC1  = 0x39,
+    SQC2  = 0x3E,
 };
 
 enum class SPECIAL {
@@ -144,12 +149,13 @@ enum class REGIMM {
 };
 
 enum class COPOpcode {
-    MFC = 0x00,
-    CFC = 0x02,
-    MTC = 0x04,
-    CTC = 0x06,
-    BC  = 0x08,
-    CO  = 0x10,
+    MFC  = 0x00,
+    CFC  = 0x02,
+    MFHC = 0x03,
+    MTC  = 0x04,
+    CTC  = 0x06,
+    BC = 0x08,
+    CO = 0x10,
     W = 0x14,
 };
 
@@ -1148,6 +1154,19 @@ void iMFLO(Allegrex *allegrex, u32 instr) {
     }
 }
 
+/* Move From VFPU Control */
+void iMFVC(Allegrex *allegrex, u32 instr) {
+    assert(!allegrex->isME());
+
+    const auto rt = getRt(instr);
+
+    allegrex->set(rt, vfpu::getControl(instr & 0xFF));
+
+    if (ENABLE_DISASM) {
+        std::printf("[Allegrex] [0x%08X] MFVC %s; %s = 0x%08X\n", cpc, regNames[rt], regNames[rt], allegrex->get(rt));
+    }
+}
+
 /* MINimum */
 void iMIN(Allegrex *allegrex, u32 instr) {
     const auto rd = getRd(instr);
@@ -1323,6 +1342,19 @@ void iORI(Allegrex *allegrex, u32 instr) {
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] ORI %s, %s, 0x%X; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], regNames[rs], imm, regNames[rt], allegrex->get(rt));
+    }
+}
+
+// ROTate Right
+void iROTR(Allegrex *allegrex, u32 instr) {
+    const auto rd = getRd(instr);
+    const auto rt = getRt(instr);
+    const auto shamt = getShamt(instr);
+
+    allegrex->set(rd, std::__rotr(allegrex->get(rt), shamt));
+
+    if (ENABLE_DISASM) {
+        std::printf("[%s] [0x%08X] ROTR %s, %s, %u; %s = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rd], regNames[rt], shamt, regNames[rd], allegrex->get(rd));
     }
 }
 
@@ -1566,6 +1598,28 @@ void iSUBU(Allegrex *allegrex, u32 instr) {
     }
 }
 
+// Store Vector Quadword
+void iSVQ(Allegrex *allegrex, u32 instr) {
+    assert(!allegrex->isME());
+
+    const auto rs = getRs(instr);
+    const auto rt = getRt(instr) | ((instr & 1 ) << 6);
+    const auto imm = (i32)(i16)(getImm(instr) & ~3);
+
+    const auto addr = allegrex->get(rs) + imm;
+
+    assert(!(addr & 0xF));
+
+    u32 data[4];
+    vfpu::readMtxQuadword(rt, data);
+
+    memory::write128(addr, (u8 *)data);
+
+    if (ENABLE_VFPU_DISASM) {
+        std::printf("[Allegrex] [0x%08X] SV.Q V%u, 0x%X(%s); [0x%08X] = V%u\n", cpc, rt, imm, regNames[rs], addr, rt);
+    }
+}
+
 // Store Word
 void iSW(Allegrex *allegrex, u32 instr) {
     const auto rs = getRs(instr);
@@ -1574,6 +1628,10 @@ void iSW(Allegrex *allegrex, u32 instr) {
 
     const auto addr = allegrex->get(rs) + imm;
     const auto data = allegrex->get(rt);
+
+    if ((addr == 0xBC300008) && (data == 0x8230055F)) {
+        //enableDisasm();
+    }
 
     if (ENABLE_DISASM) {
         std::printf("[%s] [0x%08X] SW %s, 0x%X(%s); [0x%08X] = 0x%08X\n", allegrex->getTypeName(), cpc, regNames[rt], imm, regNames[rs], addr, data);
@@ -1770,9 +1828,8 @@ i64 doInstr(Allegrex *allegrex) {
                                     iSRL(allegrex, instr);
                                     break;
                                 case 1:
-                                    std::puts("Unimplemented ROTR");
-                                    
-                                    exit(0);
+                                    iROTR(allegrex, instr);
+                                    break;
                                 default:
                                     std::printf("Invalid %s instruction 0x%02X:0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), funct, rs, instr, cpc);
 
@@ -2062,6 +2119,23 @@ i64 doInstr(Allegrex *allegrex) {
                 }
             }
             break;
+        case Opcode::COP2:
+            {
+                assert(allegrex->cop0.isCOPUsable(2));
+
+                const auto rs = getRs(instr);
+
+                switch ((COPOpcode)rs) {
+                    case COPOpcode::MFHC:
+                        iMFVC(allegrex, instr);
+                        break;
+                    default:
+                        std::printf("Unhandled %s coprocessor 2 instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), rs, instr, cpc);
+
+                        exit(0);
+                }
+            }
+            break;
         case Opcode::BEQL:
             iBEQL(allegrex, instr);
             break;
@@ -2181,6 +2255,9 @@ i64 doInstr(Allegrex *allegrex) {
             break;
         case Opcode::SWC1:
             iSWC(allegrex, 1, instr);
+            break;
+        case Opcode::SQC2:
+            iSVQ(allegrex, instr);
             break;
         default:
             std::printf("Unhandled %s instruction 0x%02X (0x%08X) @ 0x%08X\n", allegrex->getTypeName(), opcode, instr, cpc);
