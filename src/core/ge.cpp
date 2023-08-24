@@ -84,6 +84,8 @@ enum {
     CMD_PCE = 0x26,
     CMD_CTE = 0x27,
     CMD_LOE = 0x28,
+    CMD_BONEN = 0x2A,
+    CMD_BONED = 0x2B,
     CMD_WEIGHT0 = 0x2C,
     CMD_WEIGHT1 = 0x2D,
     CMD_WEIGHT2 = 0x2E,
@@ -95,6 +97,14 @@ enum {
     CMD_DIVIDE = 0x36,
     CMD_PPM = 0x37,
     CMD_PFACE = 0x38,
+    CMD_WORLDN = 0x3A,
+    CMD_WORLDD = 0x3B,
+    CMD_VIEWN = 0x3C,
+    CMD_VIEWD = 0x3D,
+    CMD_PROJN = 0x3E,
+    CMD_PROJD = 0x3F,
+    CMD_TGENN = 0x40,
+    CMD_TGEND = 0x41,
     CMD_SX = 0x42,
     CMD_SY = 0x43,
     CMD_SZ = 0x44,
@@ -180,6 +190,91 @@ enum {
     CMD_LDC3 = 0x99,
     CMD_LSC3 = 0x9A,
     CMD_CULL = 0x9B,
+    CMD_FBP = 0x9C,
+    CMD_FBW = 0x9D,
+    CMD_ZBP = 0x9E,
+    CMD_ZBW = 0x9F,
+    CMD_TBP0 = 0xA0,
+    CMD_TBP1 = 0xA1,
+    CMD_TBP2 = 0xA2,
+    CMD_TBP3 = 0xA3,
+    CMD_TBP4 = 0xA4,
+    CMD_TBP5 = 0xA5,
+    CMD_TBP6 = 0xA6,
+    CMD_TBP7 = 0xA7,
+    CMD_TBW0 = 0xA8,
+    CMD_TBW1 = 0xA9,
+    CMD_TBW2 = 0xAA,
+    CMD_TBW3 = 0xAB,
+    CMD_TBW4 = 0xAC,
+    CMD_TBW5 = 0xAD,
+    CMD_TBW6 = 0xAE,
+    CMD_TBW7 = 0xAF,
+    CMD_CBP = 0xB0,
+    CMD_CBW = 0xB1,
+    CMD_XBP1 = 0xB2,
+    CMD_XBW1 = 0xB3,
+    CMD_XBP2 = 0xB4,
+    CMD_XBW2 = 0xB5,
+    CMD_TSIZE0 = 0xB8,
+    CMD_TSIZE1 = 0xB9,
+    CMD_TSIZE2 = 0xBA,
+    CMD_TSIZE3 = 0xBB,
+    CMD_TSIZE4 = 0xBC,
+    CMD_TSIZE5 = 0xBD,
+    CMD_TSIZE6 = 0xBE,
+    CMD_TSIZE7 = 0xBF,
+    CMD_TMAP = 0xC0,
+    CMD_TSHADE = 0xC1,
+    CMD_TMODE = 0xC2,
+    CMD_TPF = 0xC3,
+    CMD_CLOAD = 0xC4,
+    CMD_CLUT = 0xC5,
+    CMD_TFILTER = 0xC6,
+    CMD_TWRAP = 0xC7,
+    CMD_TLEVEL = 0xC8,
+    CMD_TFUNC = 0xC9,
+    CMD_TEC = 0xCA,
+    CMD_TFLUSH = 0xCB,
+    CMD_TSYNC = 0xCC,
+    CMD_FOG1 = 0xCD,
+    CMD_FOG2 = 0xCE,
+    CMD_FC = 0xCF,
+    CMD_TSLOPE = 0xD0,
+    CMD_FPF = 0xD2,
+    CMD_CMODE = 0xD3,
+    CMD_SCISSOR1 = 0xD4,
+    CMD_SCISSOR2 = 0xD5,
+    CMD_MINZ = 0xD6,
+    CMD_MAXZ = 0xD7,
+    CMD_CTEST = 0xD8,
+    CMD_CREF = 0xD9,
+    CMD_CMSK = 0xDA,
+    CMD_ATEST = 0xDB,
+    CMD_STEST = 0xDC,
+    CMD_SOP = 0xDD,
+    CMD_ZTEST = 0xDE,
+    CMD_BLEND = 0xDF,
+    CMD_FIXA = 0xE0,
+    CMD_FIXB = 0xE1,
+    CMD_DITH1 = 0xE2,
+    CMD_DITH2 = 0xE3,
+    CMD_DITH3 = 0xE4,
+    CMD_DITH4 = 0xE5,
+    CMD_LOP = 0xE6,
+    CMD_ZMSK = 0xE7,
+    CMD_PMSK1 = 0xE8,
+    CMD_PMSK2 = 0xE9,
+    CMD_XPOS1 = 0xEB,
+    CMD_XPOS2 = 0xEC,
+    CMD_XSIZE = 0xEE,
+};
+
+enum {
+    CLUT_CPF_RGB565,
+    CLUT_CPF_RGBA5551,
+    CLUT_CPF_RGBA4444,
+    CLUT_CPF_RGBA8888,
 };
 
 struct VTYPE {
@@ -223,16 +318,71 @@ struct Registers {
 
     // --- Textures
 
+    // Base pointer + width
+    u32 tbp[8], tbw[8];
+
+    // CLUT base pointer
+    u32 cbp;
+
+    // CLUT
+    u32 np;
+    u32 cpf, sft, msk, csa;
+
     // Texture scale + offset
     f32 su, sv, tu, tv;
+
+    // Texture size
+    f32 tw[8], th[8];
+
+    // Texture mapping
+    u32 tmn, tmi;
+
+    // Texture format
+    u32 tpf;
+    bool ext;
+
+    // Texture mode
+    bool hsm, mc;
+    u32 mxl;
+
+    // Texture wrapping
+    bool twms, twmt;
+
+    // Texture function
+    u32 txf;
+    bool tcc, cd;
+
+    // Texture environment
+    f32 tec[3];
+
+    // --- Frame buffer
+    u32 fbp, fbw, fpf;
+
+    // --- Depth buffer
+    u32 zbp, zbw, ztf;
+    bool zmsk;
+
+    // --- Depth range
+    u32 minz, maxz;
+
+    // --- Scissor area
+    f32 sx1, sx2, sy1, sy2;
+
+    // --- CLEAR mode
+    bool set, cen, aen, zen;
 };
 
 std::array<u32, SCR_WIDTH * SCR_HEIGHT> fb;
 
+std::array<u32, 16 * 32> clut;
+
 u32 cmdargs[256];
 
 // Matrices
-u32 bone[96], world[12], view[12], proj[12], tgen[12], count[12];
+f32 bone[96], world[12], view[12], proj[12], tgen[12], count[12];
+
+// Indices
+u32 bonen, worldn, viewn, projn, tgenn;
 
 u32 control;
 u32 edramsize2;
@@ -287,37 +437,37 @@ u32 read(u32 addr) {
 
         std::printf("[GE      ] Read @ BONE%u\n", idx);
 
-        return bone[idx];
+        return *(u32 *)&bone[idx];
     } else if ((addr >= 0x1D400D80) && (addr < 0x1D400DB0)) {
         const auto idx = (addr - 0x1D400D80) >> 2;
 
         std::printf("[GE      ] Read @ WORLD%u\n", idx);
 
-        return world[idx];
+        return *(u32 *)&world[idx];
     } else if ((addr >= 0x1D400DB0) && (addr < 0x1D400DE0)) {
         const auto idx = (addr - 0x1D400DB0) >> 2;
 
         std::printf("[GE      ] Read @ VIEW%u\n", idx);
 
-        return view[idx];
+        return *(u32 *)&view[idx];
     } else if ((addr >= 0x1D400DE0) && (addr < 0x1D400E20)) {
         const auto idx = (addr - 0x1D400DE0) >> 2;
 
         std::printf("[GE      ] Read @ PROJ%u\n", idx);
 
-        return proj[idx];
+        return *(u32 *)&proj[idx];
     } else if ((addr >= 0x1D400E20) && (addr < 0x1D400E50)) {
         const auto idx = (addr - 0x1D400E20) >> 2;
 
         std::printf("[GE      ] Read @ TGEN%u\n", idx);
 
-        return tgen[idx];
+        return *(u32 *)&tgen[idx];
     } else if ((addr >= 0x1D400E50) && (addr < 0x1D400E80)) {
         const auto idx = (addr - 0x1D400E50) >> 2;
 
         std::printf("[GE      ] Read @ COUNT%u\n", idx);
 
-        return count[idx];
+        return *(u32 *)&count[idx];
     }
 
     switch ((GEReg)addr) {
@@ -481,6 +631,35 @@ void write(u32 addr, u32 data) {
     }
 }
 
+void loadCLUT() {
+    if (!regs.np) return;
+
+    const auto palSize = (regs.cpf == 3) ? 8 : 16;
+    const auto csa = 16 * regs.csa;
+
+    auto clutBase = regs.cbp;
+
+    for (u32 np = 0; np < regs.np; np++) {
+        for (int i = 0; i < palSize; i++) {
+            const auto index = csa + 8 * np + i;
+
+            switch (regs.cpf) {
+                case CLUT_CPF_RGBA8888:
+                    clut[index] = memory::read32(clutBase);
+
+                    clutBase += 4;
+                    break;
+                default:
+                    std::printf("Unhandled CLUT buffer format %u\n", regs.cpf);
+
+                    exit(0);
+            }
+
+            std::printf("[GPU     ] CLUT[0x%03X] = 0x%08X\n", index, clut[index]);
+        }
+    }
+}
+
 void executeDisplayList() {
     if (pc == listaddr) {
         std::printf("[GE      ] Executing display list @ 0x%08X, stall: 0x%08X\n", listaddr, stalladdr);
@@ -523,7 +702,12 @@ void executeDisplayList() {
             case CMD_PRIM:
                 std::printf("[GE      ] [0x%08X] PRIM %u, %u\n", cpc, (instr >> 16) & 7, instr & 0xFFFF);
 
-                exit(0);
+                if (instr != 0x04000000) {
+                    std::puts("PRIM!!!!");
+
+                    exit(0);
+                }
+                break;
             case CMD_JUMP:
                 pc = regs.base | (instr & 0xFFFFFF);
 
@@ -628,6 +812,16 @@ void executeDisplayList() {
             case CMD_LOE:
                 std::printf("[GE      ] [0x%08X] LOE %u\n", cpc, instr & 1);
                 break;
+            case CMD_BONEN:
+                std::printf("[GE      ] [0x%08X] BONEN 0x%02X\n", cpc, instr & 0x3F);
+
+                bonen = instr & 0x3F;
+                break;
+            case CMD_BONED:
+                bone[bonen++] = toFloat(instr << 8);
+            
+                std::printf("[GE      ] [0x%08X] BONED %f\n", cpc, toFloat(instr << 8));
+                break;
             case CMD_WEIGHT0:
             case CMD_WEIGHT1:
             case CMD_WEIGHT2:
@@ -652,6 +846,46 @@ void executeDisplayList() {
                 break;
             case CMD_PFACE:
                 std::printf("[GE      ] [0x%08X] PFACE %u\n", cpc, instr & 1);
+                break;
+            case CMD_WORLDN:
+                std::printf("[GE      ] [0x%08X] WORLDN %u\n", cpc, instr & 0xF);
+
+                worldn = instr & 0xF;
+                break;
+            case CMD_WORLDD:
+                world[worldn++] = toFloat(instr << 8);
+            
+                std::printf("[GE      ] [0x%08X] WORLDD %f\n", cpc, toFloat(instr << 8));
+                break;
+            case CMD_VIEWN:
+                std::printf("[GE      ] [0x%08X] VIEWN %u\n", cpc, instr & 0xF);
+
+                viewn = instr & 0xF;
+                break;
+            case CMD_VIEWD:
+                view[viewn++] = toFloat(instr << 8);
+            
+                std::printf("[GE      ] [0x%08X] VIEWD %f\n", cpc, toFloat(instr << 8));
+                break;
+            case CMD_PROJN:
+                std::printf("[GE      ] [0x%08X] PROJN %u\n", cpc, instr & 0xF);
+
+                projn = instr & 0xF;
+                break;
+            case CMD_PROJD:
+                proj[projn++] = toFloat(instr << 8);
+            
+                std::printf("[GE      ] [0x%08X] PROJD %f\n", cpc, toFloat(instr << 8));
+                break;
+            case CMD_TGENN:
+                std::printf("[GE      ] [0x%08X] TGENN %u\n", cpc, instr & 0xF);
+
+                tgenn = instr & 0xF;
+                break;
+            case CMD_TGEND:
+                tgen[tgenn++] = toFloat(instr << 8);
+            
+                std::printf("[GE      ] [0x%08X] TGEND %f\n", cpc, toFloat(instr << 8));
                 break;
             case CMD_SX:
                 regs.s[0] = toFloat(instr << 8);
@@ -706,12 +940,12 @@ void executeDisplayList() {
             case CMD_OFFSETX:
                 regs.offsetx = ((f32)(u16)instr) / 16.0;
 
-                std::printf("[GE      ] OFFSETX %f\n", regs.offsetx);
+                std::printf("[GE      ] [0x%08X] OFFSETX %f\n", cpc, regs.offsetx);
                 break;
             case CMD_OFFSETY:
                 regs.offsety = ((f32)(u16)instr) / 16.0;
 
-                std::printf("[GE      ] OFFSETY %f\n", regs.offsety);
+                std::printf("[GE      ] [0x%08X] OFFSETY %f\n", cpc, regs.offsety);
                 break;
             case CMD_SHADE:
                 std::printf("[GE      ] [0x%08X] SHADE %u\n", cpc, instr & 1);
@@ -850,8 +1084,285 @@ void executeDisplayList() {
             case CMD_CULL:
                 std::printf("[GE      ] [0x%08X] CULL %u\n", cpc, instr & 1);
                 break;
-            default:
+            case CMD_FBP:
+                regs.fbp = instr & 0xFFE000;
+
+                std::printf("[GE      ] [0x%08X] FBP 0x%08X\n", cpc, regs.fbp);
+                break;
+            case CMD_FBW:
+                regs.fbw  = instr & 0x7C0;
+                regs.fbp |= (instr & 0xFF0000) << 8;
+
+                std::printf("[GE      ] [0x%08X] FBW 0x%08X, %u\n", cpc, regs.fbp, regs.fbw);
+                break;
+            case CMD_ZBP:
+                regs.zbp = instr & 0xFFE000;
+
+                std::printf("[GE      ] [0x%08X] ZBP 0x%08X\n", cpc, regs.zbp);
+                break;
+            case CMD_ZBW:
+                regs.zbw  = instr & 0x7C0;
+                regs.zbp |= (instr & 0xFF0000) << 8;
+
+                std::printf("[GE      ] [0x%08X] ZBW 0x%08X, %u\n", cpc, regs.zbp, regs.zbw);
+                break;
+            case CMD_TBP0:
+            case CMD_TBP1:
+            case CMD_TBP2:
+            case CMD_TBP3:
+            case CMD_TBP4:
+            case CMD_TBP5:
+            case CMD_TBP6:
+            case CMD_TBP7:
+                {
+                    const auto idx = cmd - CMD_TBP0;
+
+                    regs.tbp[idx] = instr & 0xFFFFF0;
+
+                    std::printf("[GE      ] [0x%08X] TBP%d 0x%08X\n", cpc, idx, regs.tbp[idx]);
+                }
+                break;
+            case CMD_TBW0:
+            case CMD_TBW1:
+            case CMD_TBW2:
+            case CMD_TBW3:
+            case CMD_TBW4:
+            case CMD_TBW5:
+            case CMD_TBW6:
+            case CMD_TBW7:
+                {
+                    const auto idx = cmd - CMD_TBW0;
+
+                    regs.tbw[idx]  = instr & 0x7C0;
+                    regs.tbp[idx] |= (instr & 0xFF0000) << 8;
+
+                    std::printf("[GE      ] [0x%08X] TBW%d 0x%08X, %u\n", cpc, idx, regs.tbp[idx], regs.tbw[idx]);
+                }
+                break;
+            case CMD_CBP:
+                regs.cbp = instr & 0xFFFFF0;
+
+                std::printf("[GE      ] [0x%08X] CBP 0x%08X\n", cpc, regs.cbp);
+                break;
+            case CMD_CBW:
+                regs.cbp |= (instr & 0xFF0000) << 8;
+
+                std::printf("[GE      ] [0x%08X] CBW 0x%08X\n", cpc, regs.cbp);
+                break;
+            case CMD_XBP1:
+                std::printf("[GE      ] [0x%08X] XBP1 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_XBW1:
+                std::printf("[GE      ] [0x%08X] XBW1 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_XBP2:
+                std::printf("[GE      ] [0x%08X] XBP2 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_XBW2:
+                std::printf("[GE      ] [0x%08X] XBW2 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_TSIZE0:
+            case CMD_TSIZE1:
+            case CMD_TSIZE2:
+            case CMD_TSIZE3:
+            case CMD_TSIZE4:
+            case CMD_TSIZE5:
+            case CMD_TSIZE6:
+            case CMD_TSIZE7:
+                {
+                    const auto idx = cmd - CMD_TSIZE0;
+
+                    regs.tw[idx] = (f32)(1 << ((instr >> 0) & 0xF));
+                    regs.th[idx] = (f32)(1 << ((instr >> 8) & 0xF));
+
+                    std::printf("[GE      ] [0x%08X] TSIZE%u %f, %f\n", cpc, idx, regs.tw[idx], regs.th[idx]);
+                }
+                break;
+            case CMD_TMAP:
+                regs.tmn = (instr >> 0) & 3;
+                regs.tmi = (instr >> 8) & 3;
+
+                std::printf("[GE      ] [0x%08X] TMAP %u, %u\n", cpc, regs.tmn, regs.tmi);
+                break;
+            case CMD_TSHADE:
+                std::printf("[GE      ] [0x%08X] TSHADE 0x%03X\n", cpc, instr & 0x3FF);
+                break;
+            case CMD_TMODE:
+                regs.hsm = instr & 1;
+                regs.mc = instr & (1 << 8);
+                regs.mxl = (instr >> 16) & 7;
+
+                std::printf("[GE      ] [0x%08X] TMODE %d, %d, %u\n", cpc, regs.hsm, regs.mc, regs.mxl);
+                break;
+            case CMD_TPF:
+                regs.tpf = instr & 0xF;
+                regs.ext = instr & (1 << 8);
+
+                std::printf("[GE      ] [0x%08X] TPF %u, %d\n", cpc, regs.tpf, regs.ext);
+                break;
+            case CMD_CLOAD:
+                regs.np = instr & 0x3F;
+
+                std::printf("[GE      ] [0x%08X] CLOAD %u\n", cpc, regs.np);
+
+                if (regs.cbp) loadCLUT();
+                break;
+            case CMD_CLUT:
+                regs.cpf = (instr >>  0) & 3;
+                regs.sft = (instr >>  2) & 0x1F;
+                regs.msk = (instr >>  8) & 0xFF;
+                regs.csa = (instr >> 16) & 0x1F;
+
+                std::printf("[GE      ] [0x%08X] CLUT %u, %u, 0x%02X, 0x%X\n", cpc, regs.cpf, regs.sft, regs.msk, regs.csa);
+                break;
+            case CMD_TFILTER:
+                std::printf("[GE      ] [0x%08X] TFILTER 0x%03X\n", cpc, instr & 0x1FF);
+                break;
+            case CMD_TWRAP:
+                regs.twms = instr & (1 << 0);
+                regs.twmt = instr & (1 << 8);
+
+                std::printf("[GE      ] [0x%08X] TWRAP %d, %d\n", cpc, regs.twms, regs.twmt);
+                break;
+            case CMD_TLEVEL:
+                std::printf("[GE      ] [0x%08X] TLEVEL 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_TFUNC:
+                regs.txf = instr & 7;
+                regs.tcc = instr & (1 <<  0);
+                regs.cd  = instr & (1 << 16);
+
+                std::printf("[GE      ] [0x%08X] TFUNC %u, %d, %d\n", cpc, regs.txf, regs.tcc, regs.cd);
+                break;
+            case CMD_TEC:
+                regs.tec[0] = (f32)((instr >>  0) & 0xFF);
+                regs.tec[1] = (f32)((instr >>  8) & 0xFF);
+                regs.tec[2] = (f32)((instr >> 16) & 0xFF);
+
+                std::printf("[GE      ] [0x%08X] TEC %f, %f, %f\n", cpc, regs.tec[0], regs.tec[1], regs.tec[2]);
+                break;
+            case CMD_TFLUSH:
+                std::printf("[GE      ] [0x%08X] TFLUSH\n", cpc);
+                break;
+            case CMD_TSYNC:
+                std::printf("[GE      ] [0x%08X] TSYNC\n", cpc);
+                break;
+            case CMD_FOG1:
+            case CMD_FOG2:
+                std::printf("[GE      ] [0x%08X] FOG%d %f\n", cpc, 1 + cmd - CMD_FOG1, toFloat(instr << 8));
+                break;
+            case CMD_FC:
+                std::printf("[GE      ] [0x%08X] FC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_TSLOPE:
+                std::printf("[GE      ] [0x%08X] TSLOPE %f\n", cpc, toFloat(instr << 8));
+                break;
+            case CMD_FPF:
+                std::printf("[GE      ] [0x%08X] FPF %u\n", cpc, instr & 3);
+
+                regs.fpf = instr & 3;
+                break;
+            case CMD_CMODE:
+                regs.set = instr & (1 <<  0);
+                regs.cen = instr & (1 <<  8);
+                regs.aen = instr & (1 <<  9);
+                regs.zen = instr & (1 << 10);
+
+                std::printf("[GE      ] [0x%08X] CMODE %d, %d, %d, %d\n", cpc, regs.set, regs.cen, regs.aen, regs.zen);
+                break;
+            case CMD_SCISSOR1:
+                regs.sx1 = (f32)((instr >>  0) & 0x3FF);
+                regs.sy1 = (f32)((instr >> 10) & 0x3FF);
+
+                std::printf("[GE      ] [0x%08X] SCISSOR1 %f, %f\n", cpc, regs.sx1, regs.sy1);
+                break;
+            case CMD_SCISSOR2:
+                regs.sx2 = (f32)((instr >>  0) & 0x3FF);
+                regs.sy2 = (f32)((instr >> 10) & 0x3FF);
+
+                std::printf("[GE      ] [0x%08X] SCISSOR2 %f, %f\n", cpc, regs.sx2, regs.sy2);
+                break;
+            case CMD_MINZ:
+                std::printf("[GE      ] [0x%08X] MINZ 0x%04X\n", cpc, instr & 0xFFFF);
+
+                regs.minz = instr & 0xFFFF;
+                break;
+            case CMD_MAXZ:
+                std::printf("[GE      ] [0x%08X] MAXZ 0x%04X\n", cpc, instr & 0xFFFF);
+
+                regs.maxz = instr & 0xFFFF;
+                break;
+            case CMD_CTEST:
+                std::printf("[GE      ] [0x%08X] CTEST %u\n", cpc, instr & 3);
+                break;
+            case CMD_CREF:
+                std::printf("[GE      ] [0x%08X] CREF 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_CMSK:
+                std::printf("[GE      ] [0x%08X] CMSK 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_ATEST:
+                std::printf("[GE      ] [0x%08X] ATEST 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_STEST:
+                std::printf("[GE      ] [0x%08X] STEST 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_SOP:
+                std::printf("[GE      ] [0x%08X] SOP 0x%05X\n", cpc, instr & 0x7FFFF);
+                break;
+            case CMD_ZTEST:
+                std::printf("[GE      ] [0x%08X] ZTEST %u\n", cpc, instr & 7);
+
+                regs.ztf = instr & 7;
+                break;
+            case CMD_BLEND:
+                std::printf("[GE      ] [0x%08X] BLEND 0x%04X\n", cpc, instr & 0x7FFF);
+                break;
+            case CMD_FIXA:
+                std::printf("[GE      ] [0x%08X] FIXA 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_FIXB:
+                std::printf("[GE      ] [0x%08X] FIXB 0x%06X\n", cpc, instr & 0xFFFFFF);
+                break;
+            case CMD_DITH1:
+            case CMD_DITH2:
+            case CMD_DITH3:
+            case CMD_DITH4:
+                std::printf("[GE      ] [0x%08X] DITH%u 0x%06X\n", cpc, 1 + cmd - CMD_DITH1, instr & 0xFFFFFF);
+                break;
+            case CMD_LOP:
+                std::printf("[GE      ] [0x%08X] LOP 0x%X\n", cpc, instr & 0xF);
+                break;
+            case CMD_ZMSK:
+                std::printf("[GE      ] [0x%08X] ZMSK %u\n", cpc, instr & 1);
+
+                regs.zmsk = instr & 1;
+                break;
+            case CMD_PMSK1:
+            case CMD_PMSK2:
+                std::printf("[GE      ] [0x%08X] PMSK%u 0x%06X\n", cpc, 1 + cmd - CMD_PMSK1, instr & 0xFFFFFF);
+                break;
+            case CMD_XPOS1:
+            case CMD_XPOS2:
+                std::printf("[GE      ] [0x%08X] XPOS%u 0x%05X\n", cpc, 1 + cmd - CMD_XPOS1, instr & 0xFFFFF);
+                break;
+            case CMD_XSIZE:
+                std::printf("[GE      ] [0x%08X] XSIZE 0x%05X\n", cpc, instr & 0xFFFFF);
+                break;
+            case 0xF0:
+            case 0xF1:
+            case 0xF2:
+            case 0xF3:
+            case 0xF4:
+            case 0xF5:
+            case 0xF6:
+            case 0xF7:
+            case 0xF8:
+            case 0xF9:
                 std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
+                break;
+            default:
+                std::printf("Unhandled GE command 0x%02X (0x%08X) @ 0x%08X\n", cmd, instr, cpc);
 
                 exit(0);
         }
