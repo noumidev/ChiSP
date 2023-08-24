@@ -5,10 +5,14 @@
 
 #pragma once
 
+#include "../common/types.hpp"
+
 namespace psp {
 
 void init(const char *bootPath, const char *nandPath);
 void run();
+
+void update(u8 *fb);
 
 void setIRQPending(bool irqPending);
 void meSetIRQPending(bool irqPending);

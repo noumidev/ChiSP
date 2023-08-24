@@ -66,5 +66,8 @@ set(HEADERS
     src/core/crypto/spock.hpp
 )
 
+find_package(SDL2 REQUIRED)
+include_directories(PandaPSP ${SDL2_INCLUDE_DIRS})
+
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-target_link_libraries(${PROJECT_NAME} PRIVATE cryptopp)
+target_link_libraries(${PROJECT_NAME} PRIVATE cryptopp ${SDL2_LIBRARIES})
