@@ -55,6 +55,8 @@ u8 device;
 u8 command, status;
 u8 devctl;
 
+FILE *umd = NULL;
+
 void reset() {
     status = ATAStatus::DEVICE_READY;
 
@@ -62,10 +64,16 @@ void reset() {
     cylinderlow = 1;
 }
 
-void init() {
-    reset();
-
+void init(const char *path) {
     std::puts("[ATA     ] OK");
+
+    umd = std::fopen(path, "rb");
+
+    if (umd == NULL) {
+        std::puts("[ATA     ] No UMD inserted");
+    }
+
+    reset();
 }
 
 u32 readATA0(u32 addr) {
@@ -186,6 +194,10 @@ void writeATA1(u32 addr, u8 data) {
 
             exit(0);
     }
+}
+
+bool isUMDInserted() {
+    return umd != NULL;
 }
 
 }

@@ -9,7 +9,7 @@
 
 namespace psp::ata {
 
-void init();
+void init(const char *path);
 
 // ATA0
 u32  readATA0 (u32 addr);
@@ -18,5 +18,7 @@ void writeATA0(u32 addr, u32 data);
 // ATA1
 u8   readATA1 (u32 addr);
 void writeATA1(u32 addr, u8 data);
+
+bool isUMDInserted();
 
 }
