@@ -944,28 +944,6 @@ u32 getCLUT(u32 index) {
     return clut[finalIndex];
 }
 
-void DoUnswizzleTex16(const u8 *texptr, u32 *ydestp, int bxc, int byc, u32 pitch) {
-	// ydestp is in 32-bits, so this is convenient.
-	const u32 pitchBy32 = pitch >> 2;
-
-	{
-		const u32 *src = (const u32 *)texptr;
-		for (int by = 0; by < byc; by++) {
-			u32 *xdest = ydestp;
-			for (int bx = 0; bx < bxc; bx++) {
-				u32 *dest = xdest;
-				for (int n = 0; n < 8; n++) {
-					memcpy(dest, src, 16);
-					dest += pitchBy32;
-					src += 4;
-				}
-				xdest += 4;
-			}
-			ydestp += pitchBy32 * 8;
-		}
-	}
-}
-
 void fetchTex(f32 s, f32 t, f32 *texColors) {
     const auto u = (u32)s;
     const auto v = (u32)t;
