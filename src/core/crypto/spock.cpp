@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstdio>
 
+#include "../ata.hpp"
 #include "../gpio.hpp"
 #include "../intc.hpp"
 #include "../scheduler.hpp"
@@ -169,6 +170,12 @@ void write(u32 addr, u32 data) {
                 // The kernel expects this GPIO pin to go high. On PSP Go, this is also used for Bluetooth?
 
                 gpio::set(gpio::GPIOPin::SPOCK);
+
+                if (ata::isUMDInserted()) {
+                    gpio::set(gpio::GPIOPin::UMD);
+                } else {
+                    gpio::clear(gpio::GPIOPin::UMD);
+                }
 
                 reset &= ~1;
             }
