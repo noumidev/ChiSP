@@ -57,7 +57,9 @@ void init(const char *bootPath) {
 u8 *getMemoryPointer(u32 addr) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
+    if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
+        return &edram[addr & ((u32)MemorySize::EDRAM - 1)];
+    } else if (inRange(addr, (u64)MemoryBase::DRAM, (u64)MemorySize::DRAM)) {
         return &dram[addr & ((u32)MemorySize::DRAM - 1)];
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
         return &sharedRAM[addr & ((u32)MemorySize::EDRAM - 1)];
