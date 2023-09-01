@@ -294,10 +294,10 @@ void cmdDecryptPrivate() {
         kirkDecryptAES(kHeader.decryptKey, data, mHeader.dataLength);
 
         // (Debug) Print decrypted data
-        std::puts("Data is:");
-        for (u64 i = 0; i < mHeader.dataLength; i += 16) {
-            std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&data[i], *(u32 *)&data[i + 4], *(u32 *)&data[i + 8], *(u32 *)&data[i + 12]);
-        }
+        //std::puts("Data is:");
+        //for (u64 i = 0; i < mHeader.dataLength; i += 16) {
+        //    std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&data[i], *(u32 *)&data[i + 4], *(u32 *)&data[i + 8], *(u32 *)&data[i + 12]);
+        //}
 
         // TODO: verify CMAC?
 
@@ -345,10 +345,10 @@ void cmdDecryptAESKeystore() {
     kirkDecryptAES(AES_KEYS[keyIdx], data, dataLength);
 
     // (Debug) Print decrypted data
-    std::puts("Data is:");
-    for (u64 i = 0; i < dataLength; i += 16) {
-        std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&data[i], *(u32 *)&data[i + 4], *(u32 *)&data[i + 8], *(u32 *)&data[i + 12]);
-    }
+    //std::puts("Data is:");
+    //for (u64 i = 0; i < dataLength; i += 16) {
+    //    std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&data[i], *(u32 *)&data[i + 4], *(u32 *)&data[i + 8], *(u32 *)&data[i + 12]);
+    //}
 
     std::memcpy(dstBuffer, data, dataLength);
 }
