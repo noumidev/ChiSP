@@ -124,10 +124,10 @@ void doDMA(bool toNAND, bool isPageEnabled, bool isSpareEnabled) {
 
     std::memcpy(nandBuffer.data(), &nand[PAGE_SIZE_ECC * dmapage], PAGE_SIZE_ECC);
 
-    std::puts("NAND buffer is:");
-    for (u64 i = 0; i < PAGE_SIZE_ECC; i += 16) {
-        std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&nandBuffer[i], *(u32 *)&nandBuffer[i + 4], *(u32 *)&nandBuffer[i + 8], *(u32 *)&nandBuffer[i + 12]);
-    }
+    //std::puts("NAND buffer is:");
+    //for (u64 i = 0; i < PAGE_SIZE_ECC; i += 16) {
+    //    std::printf("0x%08X 0x%08X 0x%08X 0x%08X\n", *(u32 *)&nandBuffer[i], *(u32 *)&nandBuffer[i + 4], *(u32 *)&nandBuffer[i + 8], *(u32 *)&nandBuffer[i + 12]);
+    //}
 }
 
 void finishTransfer() {
