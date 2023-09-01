@@ -12,7 +12,7 @@
 
 namespace psp::allegrex::fpu {
 
-constexpr auto ENABLE_DISASM = true;
+constexpr auto ENABLE_DISASM = false;
 
 enum class SingleOpcode {
     ADD = 0x00,
@@ -119,7 +119,9 @@ void FPU::iC(u32 instr) {
 
     cpcond = ((cond & (1 << 2)) && isLess) || ((cond & (1 << 1)) && isEqual) || ((cond & (1 << 0)) && isUnordered);
 
-    std::printf("[%s] C.%s.S F%u, F%u; F%u = %f, F%u = %f, CPCOND: %d\n", fpuName[cpuID], condNames[cond], fs, ft, fs, s, ft, t, cpcond);
+    if (ENABLE_DISASM) {
+        std::printf("[%s] C.%s.S F%u, F%u; F%u = %f, F%u = %f, CPCOND: %d\n", fpuName[cpuID], condNames[cond], fs, ft, fs, s, ft, t, cpcond);
+    }
 }
 
 // ConVert To Single
