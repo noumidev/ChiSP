@@ -2,7 +2,7 @@
  LLE PlayStation Portable emulator written in C++. Very early in development!
 
 # Usage
- `ChiSP preipl.bin nand.bin`
+ `ChiSP preipl.bin nand.bin [umd.iso]`
 
 # Milestones
  - Reads IPL from NAND, decrypts IPL with KIRK
