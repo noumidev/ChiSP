@@ -61,7 +61,7 @@ void sdlInit() {
     screen.texture = SDL_CreateTexture(screen.renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, SCR_WIDTH, SCR_HEIGHT);
 }
 
-void init(const char *bootPath, const char *nandPath) {
+void init(const char *bootPath, const char *nandPath, const char *umdPath) {
     sdlInit();
 
     memory::init(bootPath);
@@ -82,7 +82,7 @@ void init(const char *bootPath, const char *nandPath) {
     spock::init();
     syscon::init();
     systime::init();
-    ata::init();
+    ata::init(umdPath);
 
     std::puts("[PSP     ] OK");
 }

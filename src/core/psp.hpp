@@ -9,7 +9,7 @@
 
 namespace psp {
 
-void init(const char *bootPath, const char *nandPath);
+void init(const char *bootPath, const char *nandPath, const char *umdPath);
 void run();
 
 void update(u8 *fb);
