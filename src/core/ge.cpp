@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <vector>
 
@@ -17,6 +18,9 @@
 #include "scheduler.hpp"
 
 namespace psp::ge {
+
+using memory::MemoryBase;
+using memory::MemorySize;
 
 constexpr auto ENABLE_DEBUG_PRINT = true;
 
@@ -60,6 +64,8 @@ enum {
     CMD_VADR = 0x01,
     CMD_IADR = 0x02,
     CMD_PRIM = 0x04,
+    CMD_BEZIER = 0x05,
+    CMD_SPLINE = 0x06,
     CMD_JUMP = 0x08,
     CMD_END = 0x0C,
     CMD_FINISH = 0x0F,
@@ -302,6 +308,27 @@ enum {
     CLUT_CPF_RGBA8888,
 };
 
+enum {
+    ZTF_NEVER,
+    ZTF_ALWAYS,
+    ZTF_EQUAL,
+    ZTF_NOTEQUAL,
+    ZTF_LESS,
+    ZTF_LEQUAL,
+    ZTF_GREATER,
+    ZTF_GEQUAL,
+};
+
+enum PSM {
+    PSM16,
+    PSM32,
+};
+
+const char *psmNames[] {
+    "PSM16",
+    "PSM32",
+};
+
 struct VTYPE {
     u32 tt; // Tex coord type
     u32 ct; // Color type
@@ -447,6 +474,12 @@ Registers regs;
 u64 idSendIRQ;
 
 void executeDisplayList();
+
+inline u32 convertRGBA4444(u32 in) {
+    const auto color  = ((in & 0xF000) << 12) | ((in & 0xF00) << 8) | ((in & 0xF0) << 4) | (in & 0xF);
+
+    return color | (color << 4);
+}
 
 void checkInterrupt() {
     if (irqstatus) {
@@ -673,6 +706,87 @@ void write(u32 addr, u32 data) {
     }
 }
 
+inline u32 getAddr8(u32 base, u32 width, u32 x, u32 y) {
+    return base + 4 * (x >> 2) + 4 * ((width * y) >> 2) + (x & 3);
+}
+
+inline u32 getAddr16(u32 base, u32 width, u32 x, u32 y) {
+    return base + 4 * (x >> 1) + 4 * ((width * y) >> 1) + 2 * (x & 1);
+}
+
+inline u32 getAddr32(u32 base, u32 width, u32 x, u32 y) {
+    return base + 4 * x + 4 * width * y;
+}
+
+template<PSM psm>
+u32 readVRAM(u32 base, u32 width, u32 x, u32 y) {
+    switch (psm) {
+        case PSM::PSM16:
+            base += 4 * (x >> 1) + 4 * ((width * y) >> 1);
+            break;
+        case PSM::PSM32:
+            base += 4 * x + 4 * width * y;
+            break;
+        default:
+            std::printf("Unhandled pixel storage mode %s\n", psmNames[psm]);
+
+            exit(0);
+    }
+
+    base &= (u32)MemorySize::EDRAM - 1;
+
+    const auto edram = memory::getMemoryPointer((u32)MemoryBase::EDRAM);
+
+    u32 data = 0;
+    switch (psm) {
+        case PSM::PSM16:
+            std::memcpy(&data, &edram[base + 2 * (x & 1)], sizeof(u16));
+            break;
+        case PSM::PSM32:
+            std::memcpy(&data, &edram[base], sizeof(u32));
+            break;
+        default:
+            std::printf("Unhandled pixel storage mode %s\n", psmNames[psm]);
+
+            exit(0);
+    }
+
+    return data;
+}
+
+template<PSM psm>
+void writeVRAM(u32 base, u32 width, u32 x, u32 y, u32 data) {
+    switch (psm) {
+        case PSM::PSM16:
+            base += 4 * (x >> 1) + 4 * ((width * y) >> 1);
+            break;
+        case PSM::PSM32:
+            base += 4 * x + 4 * width * y;
+            break;
+        default:
+            std::printf("Unhandled pixel storage mode %s\n", psmNames[psm]);
+
+            exit(0);
+    }
+
+    base &= (u32)MemorySize::EDRAM - 1;
+
+    const auto edram = memory::getMemoryPointer((u32)MemoryBase::EDRAM);
+
+    switch (psm) {
+        case PSM::PSM16:
+            std::memcpy(&edram[base + 2 * (x & 1)], &data, sizeof(u16));
+            break;
+        case PSM::PSM32:
+            std::memcpy(&edram[base], &data, sizeof(u32));
+            break;
+        default:
+            std::printf("Unhandled pixel storage mode %s\n", psmNames[psm]);
+
+            exit(0);
+    }
+}
+
 void transform3(f32 *mtx, Vertex *vtxList, u32 count) {
     for (u32 i = 0; i < count; i++) {
         const auto vtx = &vtxList[i];
@@ -741,17 +855,55 @@ void transformDisplay(f32 offsetx, f32 offsety, Vertex *vtxList, u32 count) {
     }
 }
 
+bool depthTest(f32 x, f32 y, u16 z) {
+    if (!regs.zte) return true; // Depth testing disabled, every pixel passes
+
+    const auto oldZ = (u16)readVRAM<PSM::PSM16>(regs.zbp, regs.zbw, x, y);
+
+    if (!regs.set) { // Handle CLEAR mode
+        switch (regs.ztf) {
+            case ZTF_NEVER: // Never
+                return false;
+            case ZTF_ALWAYS: // Always
+                break;
+            case ZTF_EQUAL: // Equal
+                if (z != oldZ) return false;
+                break;
+            case ZTF_NOTEQUAL: // Not equal
+                if (z == oldZ) return false;
+                break;
+            case ZTF_LESS: // Less
+                if (z >= oldZ) return false;
+                break;
+            case ZTF_LEQUAL: // Less/Equal
+                if (z > oldZ) return false;
+                break;
+            case ZTF_GREATER: // Greater
+                if (z <= oldZ) return false;
+                break;
+            case ZTF_GEQUAL: // Greater/Equal
+                if (z < oldZ) return false;
+                break;
+        }
+    }
+
+    // Write new Z
+    if (!regs.zmsk || (regs.set && regs.zen)) writeVRAM<PSM::PSM16>(regs.zbp, regs.zbw, x, y, z);
+
+    return true;
+}
+
 void loadCLUT() {
     if (!regs.np) return;
 
-    const auto palSize = (regs.cpf == 3) ? 8 : 16;
+    const auto palSize = (regs.cpf == CLUT_CPF_RGBA8888) ? 8 : 16;
     const auto csa = 16 * regs.csa;
 
     auto clutBase = regs.cbp;
 
     for (u32 np = 0; np < regs.np; np++) {
         for (int i = 0; i < palSize; i++) {
-            const auto index = csa + 8 * np + i;
+            const auto index = csa + palSize * np + i;
 
             switch (regs.cpf) {
                 case CLUT_CPF_RGBA8888:
@@ -765,8 +917,375 @@ void loadCLUT() {
                     exit(0);
             }
 
-            std::printf("[GPU     ] CLUT[0x%03X] = 0x%08X\n", index, clut[index]);
+            std::printf("[GE      ] CLUT[0x%03X] = 0x%08X\n", index, clut[index]);
         }
+    }
+}
+
+u32 getCLUT(u32 index) {
+    u32 finalIndex;
+
+    // Shift index, output low 8 bits
+    index >>= regs.sft;
+    index &= 0xFF;
+
+    // AND with mask
+    index &= regs.msk;
+
+    // Low 4 bits are unchanged
+    finalIndex = index & 0xF;
+
+    // OR high 4 bits with CSA[3:0]
+    finalIndex |= (index & 0xF0) | ((regs.csa & 0xF) << 4);
+
+    // High CSA bit is bit 8 of final index
+    finalIndex |= ((regs.csa & 0x10) << 4);
+
+    return clut[finalIndex];
+}
+
+void DoUnswizzleTex16(const u8 *texptr, u32 *ydestp, int bxc, int byc, u32 pitch) {
+	// ydestp is in 32-bits, so this is convenient.
+	const u32 pitchBy32 = pitch >> 2;
+
+	{
+		const u32 *src = (const u32 *)texptr;
+		for (int by = 0; by < byc; by++) {
+			u32 *xdest = ydestp;
+			for (int bx = 0; bx < bxc; bx++) {
+				u32 *dest = xdest;
+				for (int n = 0; n < 8; n++) {
+					memcpy(dest, src, 16);
+					dest += pitchBy32;
+					src += 4;
+				}
+				xdest += 4;
+			}
+			ydestp += pitchBy32 * 8;
+		}
+	}
+}
+
+void fetchTex(f32 s, f32 t, f32 *texColors) {
+    const auto u = (u32)s;
+    const auto v = (u32)t;
+
+    auto clutLookup = false;
+
+    u32 texel;
+    switch (regs.tpf) {
+        case 2: // RGBA4444
+            texel = convertRGBA4444(memory::read16(getAddr16(regs.tbp[0], regs.tbw[0], u, v)));
+            //break;
+        case 3: // RGBA8888
+            texel = memory::read32(getAddr32(regs.tbp[0], regs.tbw[0], u, v));
+            break;
+        case 5: // 8-bit indexed
+            clutLookup = true;
+
+            texel = memory::read8(getAddr8(regs.tbp[0], regs.tbw[0], u, v));
+            break;
+        default:
+            std::printf("Unhandled texture storage mode %u\n", regs.tpf);
+            
+            exit(0);
+    }
+
+    if (clutLookup) {
+        texel = getCLUT(texel);
+    }
+
+    texColors[3] = (f32)((texel >> 24) & 0xFF);
+    texColors[2] = (f32)((texel >> 16) & 0xFF);
+    texColors[1] = (f32)((texel >>  8) & 0xFF);
+    texColors[0] = (f32)((texel >>  0) & 0xFF);
+}
+
+f32 edgeFunction(f32 *a, f32 *b, f32 *c) {
+    return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+}
+
+f32 interpolate(f32 w0, f32 w1, f32 w2, f32 a, f32 b, f32 c, f32 area) {
+    return (w0 * a + w1 * b + w2 * c) / area;
+}
+
+void interpolateUV(f32 w0, f32 w1, f32 w2, Vertex *vtxList, f32 *texCoords) {
+    auto a = &vtxList[0];
+    auto b = &vtxList[1];
+    auto c = &vtxList[2];
+
+    const auto w = (1.0 / a->m[3]) * w0 + (1.0 / b->m[3]) * w1 + (1.0 / c->m[3]) * w2;
+    const auto s = (a->s / a->m[3]) * w0 + (b->s / b->m[3]) * w1 + (c->s / c->m[3]) * w2;
+    const auto t = (a->t / a->m[3]) * w0 + (b->t / b->m[3]) * w1 + (c->t / c->m[3]) * w2;
+
+    texCoords[0] = s / w;
+    texCoords[1] = t / w;
+}
+
+// Interpolate ST coordinates
+f32 getTexCoordStart(f32 x, f32 tex1, f32 x1, f32 tex2, f32 x2) {
+    auto temp = tex1 * (x2 - x) + tex2 * (x - x1);
+
+    if ((x2 - x1) == 0.0) return tex1;
+
+    return temp / (tex2 - tex1);
+}
+
+// Returns ST step
+f32 getTexCoordStep(f32 tex1, f32 x1, f32 tex2, f32 x2) {
+    if ((x2 - x1) == 0.0) return tex2 - tex1;
+    return (tex2 - tex1) / (x2 - x1);
+}
+
+void clamp(f32 *colors) {
+    for (int i = 0; i < 3; i++) {
+        if (colors[i] < 0.0) {
+            colors[i] = 0.0;
+        } else if (colors [i] > 255.0) {
+            colors[i] = 255.0;
+        }
+    }
+}
+
+void drawTriangle(Vertex *vtxList) {
+    auto a = &vtxList[0];
+    auto b = &vtxList[1];
+    auto c = &vtxList[2];
+
+    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Triangle - [%f,%f] [%f,%f] [%f,%f]\n", a->m[0], a->m[1], b->m[0], b->m[1], c->m[0], c->m[1]);
+
+    if (edgeFunction(a->m, b->m, c->m) < 0.0) {
+        std::swap(b, c);
+    }
+
+    const auto area = edgeFunction(a->m, b->m, c->m);
+
+    // Calculate bounding box
+    const auto xMin = std::round(std::max(std::min(c->m[0], std::min(a->m[0], b->m[0])), regs.sx1));
+    const auto xMax = std::round(std::min(std::max(c->m[0], std::max(a->m[0], b->m[0])), regs.sx2 + 1.0f));
+    const auto yMin = std::round(std::max(std::min(c->m[1], std::min(a->m[1], b->m[1])), regs.sy1));
+    const auto yMax = std::round(std::min(std::max(c->m[1], std::max(a->m[1], b->m[1])), regs.sy2 + 1.0f));
+
+    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Bounding box - [%f,%f] [%f,%f]\n", xMin, yMin, xMax, yMax);
+
+    assert(xMin < xMax);
+    assert(yMin < yMax);
+
+    f32 p[2], triColors[4];
+
+    // Flat shading
+    if (!regs.iip) {
+        for (int i = 0; i < 4; i++) {
+            triColors[i] = c->c[i];
+        }
+    }
+
+    p[1] = yMin;
+    for (; p[1] < yMax; p[1] += 1.0) {
+        p[0] = xMin;
+        for (; p[0] < xMax; p[0] += 1.0) {
+            // Calculate weights
+            const auto w0 = edgeFunction(b->m, c->m, p);
+            const auto w1 = edgeFunction(c->m, a->m, p);
+            const auto w2 = edgeFunction(a->m, b->m, p);
+
+            if ((w0 >= 0.0) && (w1 >= 0.0) && (w2 >= 0.0)) {
+                const auto z = (u16)std::round(interpolate(w0, w1, w2, a->m[2], b->m[2], c->m[2], area));
+
+                if ((z < regs.minz) || (z > regs.maxz)) continue;
+
+                f32 colors[4];
+                u32 finalColor;
+
+                if (regs.iip) {
+                    for (int i = 0; i < 4; i++) {
+                        triColors[i] = interpolate(w0, w1, w2, a->c[i], b->c[i], c->c[i], area);
+                    }
+                }
+
+                if (regs.tme) { // Fetch texel
+                    f32 texCoords[2];
+                    switch (regs.tmn) {
+                        case 0: // UV mapping
+                            interpolateUV(w0, w1, w2, vtxList, texCoords);
+
+                            // Scale and offset tex coords
+                            texCoords[0] = texCoords[0] * regs.su + regs.tu;
+                            texCoords[1] = texCoords[1] * regs.sv + regs.tv;
+                            break;
+                        default:
+                            std::printf("Unhandled texture mapping mode %u\n", regs.tmn);
+
+                            exit(0);
+                    }
+
+                    // Clamp/wrap tex coords
+                    if (regs.twms) {
+                        if (texCoords[0] < 0.0) {
+                            texCoords[0] = 0.0;
+                        } else if (texCoords[0] > 1.0) {
+                            texCoords[0] = 1.0;
+                        }
+                    } else {
+                        texCoords[0] = std::fmod(texCoords[0], 1.0f);
+                    }
+
+                    if (regs.twmt) {
+                        if (texCoords[1] < 0.0) {
+                            texCoords[1] = 0.0;
+                        } else if (texCoords[1] > 1.0) {
+                            texCoords[1] = 1.0;
+                        }
+                    } else {
+                        texCoords[1] = std::fmod(texCoords[1], 1.0f);
+                    }
+
+                    // Get texel coordinates
+                    texCoords[0] = std::floor(texCoords[0] * regs.tw[0]);
+                    texCoords[1] = std::floor(texCoords[1] * regs.th[0]);
+
+                    f32 texColors[4];
+
+                    fetchTex(texCoords[0], texCoords[1], texColors);
+
+                    // Blend texture and vertex colors
+                    switch (3) {
+                        case 0: // Modulate
+                            for (int i = 0; i < 3; i++) {
+                                colors[i] = (texColors[i] * triColors[i]) / 255.0;
+                            }
+
+                            assert(!regs.tcc);
+
+                            colors[3] = triColors[3];
+                            break;
+                        case 3: // Replace
+                            for (int i = 0; i < 3; i++) {
+                                colors[i] = texColors[i];
+                            }
+                            break;
+                        case 4: // Add
+                            for (int i = 0; i < 3; i++) {
+                                colors[i] = texColors[i] + triColors[i];
+                            }
+
+                            assert(!regs.tcc);
+
+                            colors[3] = triColors[3];
+                            break;
+                        default:
+                            std::printf("Unhandled texture function %u\n", regs.txf);
+
+                            exit(0);
+                    }
+
+                    clamp(colors);
+                } else { // Use vertex colors
+                    for (int i = 0; i < 4; i++) {
+                        colors[i] = triColors[i];
+                    }
+                }
+
+                finalColor = ((u32)colors[3] << 24) | ((u32)colors[2] << 16) | ((u32)colors[1] << 8) | (u32)colors[0];
+
+                if (!depthTest((u32)std::round(p[0]), (u32)std::round(p[1]), z)) continue;
+
+                writeVRAM<PSM::PSM32>(regs.fbp, regs.fbw, (u32)std::round(p[0]), (u32)std::round(p[1]), finalColor);
+            }
+        }
+    }
+}
+
+void drawSprite(Vertex *vtxList) {
+    auto a = &vtxList[0];
+    auto b = &vtxList[1];
+
+    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Sprite - [%f,%f] [%f,%f]\n", a->m[0], a->m[1], b->m[0], b->m[1]);
+
+    // Calculate "bounding box"
+    const auto xMin = std::round(std::max(std::min(a->m[0], b->m[0]), regs.sx1));
+    const auto xMax = std::round(std::min(std::max(a->m[0], b->m[0]), regs.sx2 + 1.0f));
+    const auto yMin = std::round(std::max(std::min(a->m[1], b->m[1]), regs.sy1));
+    const auto yMax = std::round(std::min(std::max(a->m[1], b->m[1]), regs.sy2 + 1.0f));
+
+    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Bounding box - [%f,%f] [%f,%f]\n", xMin, yMin, xMax, yMax);
+
+    assert(xMin < xMax);
+    assert(yMin < yMax);
+
+    const auto sStart = getTexCoordStart(xMin, a->s, a->m[0], b->s, b->m[0]);
+    const auto tStart = getTexCoordStart(yMin, a->t, a->m[1], b->t, b->m[1]);
+
+    const auto sStep = getTexCoordStep(a->s, a->m[0], b->s, b->m[0]);
+    const auto tStep = getTexCoordStep(a->t, a->m[1], b->t, b->m[1]);
+
+    std::printf("[GE      ] S: %f, S step: %f, T: %f, T step: %f\n", sStart, sStep, tStart, tStep);
+
+    const auto z = (u16)std::round(b->m[2]);
+
+    if ((z < regs.minz) || (z > regs.maxz)) return;
+
+    auto t = tStart;
+    for (auto y = yMin; y < yMax; y += 1.0) {
+        auto s = sStart;
+        for (auto x = xMin; x < xMax; x += 1.0) {
+            if (!depthTest((u32)std::round(x), (u32)std::round(y), z)) {
+                s += sStep;
+                continue;
+            }
+
+            f32 colors[4];
+            u32 finalColor;
+
+            if (regs.tme && !regs.set) {
+                f32 texColors[4];
+
+                fetchTex(std::floor(s), std::floor(t), texColors);
+
+                // Blend texture and vertex colors
+                switch (3) {
+                    case 0: // Modulate
+                        for (int i = 0; i < 3; i++) {
+                            colors[i] = (texColors[i] * b->c[i]) / 255.0;
+                        }
+                        break;
+                    case 3: // Replace
+                        for (int i = 0; i < 3; i++) {
+                            colors[i] = texColors[i];
+                        }
+                        break;
+                    case 4: // Add
+                        for (int i = 0; i < 3; i++) {
+                            colors[i] = texColors[i] + b->c[i];
+                        }
+                        break;
+                    default:
+                        std::printf("Unhandled texture function %u\n", regs.txf);
+
+                        exit(0);
+                }
+
+                if (regs.tcc) {
+                    colors[3] = texColors[3];
+                } else {
+                    colors[3] = b->c[3];
+                }
+
+                clamp(colors);
+            } else { // Use vertex colors
+                for (int i = 0; i < 4; i++) {
+                    colors[i] = b->c[i];
+                }
+            }
+
+            finalColor = ((u32)colors[3] << 24) | ((u32)colors[2] << 16) | ((u32)colors[1] << 8) | (u32)colors[0];
+
+            writeVRAM<PSM::PSM32>(regs.fbp, regs.fbw, (u32)std::round(x), (u32)std::round(y), finalColor);
+
+            s += sStep;
+        }
+
+        t += tStep;
     }
 }
 
@@ -857,6 +1376,15 @@ void drawPrim(u32 prim, u32 count) {
         switch (vtype.nt) {
             case 0: // None
                 break;
+            case 3:
+                for (int j = 0; j < 3; j++) {
+                    vtx->n[j] = toFloat(memory::read32(vtxAddr + 4 * j));
+                }
+
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Nx: %f, Ny: %f, Nz: %f\n", vtx->n[0], vtx->n[1], vtx->n[2]);
+
+                vtxAddr += 12;
+                break;
             default:
                 std::printf("Unhandled normal type %u\n", vtype.nt);
 
@@ -902,6 +1430,20 @@ void drawPrim(u32 prim, u32 count) {
     if (prim != PRIM_SPRITE) transformDisplay(regs.offsetx, regs.offsety, vtxList.data(), count);
 
     switch (prim) {
+        case PRIM_TRIANGLESTRIP:
+            assert(count > 2);
+
+            for (u32 i = 0; i < (count - 2); i++) {
+                drawTriangle(&vtxList[i]);
+            }
+            break;
+        case PRIM_SPRITE:
+            assert(!(count & 1));
+
+            for (u32 i = 0; i < count; i += 2) {
+                drawSprite(&vtxList[i]);
+            }
+            break;
         default:
             std::printf("Unhandled primitive %s\n", primNames[prim]);
 
@@ -952,6 +1494,12 @@ void executeDisplayList() {
                 std::printf("[GE      ] [0x%08X] PRIM %u, %u\n", cpc, (instr >> 16) & 7, instr & 0xFFFF);
 
                 drawPrim((instr >> 16) & 7, instr & 0xFFFF);
+                break;
+            case CMD_BEZIER:
+                std::printf("[GE      ] [0x%08X] BEZIER 0x%04X\n", cpc, instr & 0xFFFF);
+                break;
+            case CMD_SPLINE:
+                std::printf("[GE      ] [0x%08X] SPLINE 0x%05X\n", cpc, instr & 0xFFFFF);
                 break;
             case CMD_JUMP:
                 pc = regs.base | (instr & 0xFFFFFF);
@@ -1378,7 +1926,7 @@ void executeDisplayList() {
                 {
                     const auto idx = cmd - CMD_TBW0;
 
-                    regs.tbw[idx]  = instr & 0x7C0;
+                    regs.tbw[idx]  = instr & 0x7FF;
                     regs.tbp[idx] |= (instr & 0xFF0000) << 8;
 
                     std::printf("[GE      ] [0x%08X] TBW%d 0x%08X, %u\n", cpc, idx, regs.tbp[idx], regs.tbw[idx]);
@@ -1604,6 +2152,7 @@ void executeDisplayList() {
             case 0xF7:
             case 0xF8:
             case 0xF9:
+            case 0xFF:
                 std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
                 break;
             default:
@@ -1642,7 +2191,7 @@ void drawScreen() {
         std::memcpy(&fb[i * SCR_WIDTH], &fbBase[4 * i * fbConfig.stride], SCR_WIDTH * 4);
     }
 
-    exit(0);
+    update((u8 *)fb.data());
 }
 
 }
