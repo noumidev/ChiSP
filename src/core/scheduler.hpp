@@ -11,7 +11,7 @@
 
 namespace psp::scheduler {
 
-constexpr i64 _1MS = 333;
+constexpr i64 _1US = 333;
 
 u64 registerEvent(std::function<void(int)> func);
 

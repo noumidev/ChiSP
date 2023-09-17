@@ -16,7 +16,7 @@
 
 namespace psp::i2c {
 
-constexpr i64 I2C_OP_CYCLES = 20 * scheduler::_1MS;
+constexpr i64 I2C_OP_CYCLES = 20 * scheduler::_1US;
 
 enum class I2CReg {
     UNKNOWN0 = 0x1E200000,

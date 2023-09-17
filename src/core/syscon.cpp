@@ -16,7 +16,7 @@
 
 namespace psp::syscon {
 
-constexpr i64 SYSCON_OP_CYCLES = 3500 * scheduler::_1MS;
+constexpr i64 SYSCON_OP_CYCLES = 3500 * scheduler::_1US;
 
 constexpr u8 BARYON_TIMESTAMP[] = {2, 0, 0, 5, 0, 9, 2, 6, 0, 4, 4, 1}; // 2005/09/26 04:41
 
