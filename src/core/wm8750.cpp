@@ -3,7 +3,7 @@
  * Copyright (C) 2023  noumidev
  */
 
-#include "cy27040.hpp"
+#include "wm8750.hpp"
 
 #include <cassert>
 #include <cstdio>
