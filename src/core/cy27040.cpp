@@ -34,6 +34,11 @@ void transmit(u8 *txData) {
 
             std::printf("[CY27040 ] Set Clock Control = 0x%02X\n", clockControl);
             break;
+        case ClockgenReg::SpreadSpectrumControl:
+            spreadSpectrumControl = txData[1];
+
+            std::printf("[CY27040 ] Spread Spectrun Control = 0x%02X\n", spreadSpectrumControl);
+            break;
         default:
             std::printf("Unhandled CY27040 address 0x%02X\n", addr);
 
