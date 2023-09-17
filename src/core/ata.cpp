@@ -23,14 +23,13 @@ enum class ATA0Reg {
 enum class ATA1Reg {
     // Command block
     DATA  = 0x1D700000,
-    FEATURE = 0x1D700001,
+    FEATURES = 0x1D700001,
     ERROR = 0x1D700001,
     SECTORCOUNT = 0x1D700002,
-    REASON  = 0x1D700002,
-    CYLINDERLOW = 0x1D700003,
-    BYTECOUNTLOW  = 0x1D700004,
-    BYTECOUNTHIGH = 0x1D700005,
-    DEVICE  = 0x1D700006,
+    LBALOW  = 0x1D700003,
+    LBAMID  = 0x1D700004,
+    LBAHIGH = 0x1D700005,
+    DRIVE   = 0x1D700006,
     COMMAND = 0x1D700007,
     STATUS1 = 0x1D700007,
     // Control block
@@ -48,10 +47,9 @@ u32 ata0Unknown[9];
 
 // ATA1 (ATAPI) regs
 u8 features, error;
-u8 sectorcount, reason;
-u8 cylinderlow;
-u8 bytecountlow, bytecounthigh;
-u8 device;
+u8 sectorcount;
+u8 lbalow, lbamid, lbahigh;
+u8 drive;
 u8 command, status;
 u8 devctl;
 
@@ -60,8 +58,10 @@ FILE *umd = NULL;
 void reset() {
     status = ATAStatus::DEVICE_READY;
 
-    reason = 1;
-    cylinderlow = 1;
+    // Write the packet device signature
+    sectorcount = lbalow = 1;
+    lbamid = 0x14;
+    lbahigh = 0xEB;
 }
 
 void init(const char *path) {
@@ -146,28 +146,27 @@ u8 readATA1(u32 addr) {
             std::puts("[ATA     ] Read @ ERROR");
         
             return error;
-        case ATA1Reg::REASON:
-            std::puts("[ATA     ] Read @ REASON");
+        case ATA1Reg::SECTORCOUNT:
+            std::puts("[ATA     ] Read @ SECTORCOUNT");
         
-            return reason;
-        case ATA1Reg::CYLINDERLOW:
-            std::puts("[ATA     ] Read @ CYLINDERLOW");
+            return sectorcount;
+        case ATA1Reg::LBALOW:
+            std::puts("[ATA     ] Read @ LBALOW");
         
-            return cylinderlow;
-        case ATA1Reg::BYTECOUNTLOW:
-            std::puts("[ATA     ] Read @ BYTECOUNTLOW");
+            return lbalow;
+        case ATA1Reg::LBAMID:
+            std::puts("[ATA     ] Read @ LBAMID");
         
-            return bytecountlow;
-        case ATA1Reg::BYTECOUNTHIGH:
-            std::puts("[ATA     ] Read @ BYTECOUNTHIGH");
+            return lbamid;
+        case ATA1Reg::LBAHIGH:
+            std::puts("[ATA     ] Read @ LBAHIGH");
         
-            return bytecounthigh;
-        case ATA1Reg::DEVICE:
-            std::puts("[ATA     ] Read @ DEVICE");
+            return lbahigh;
+        case ATA1Reg::DRIVE:
+            std::puts("[ATA     ] Read @ DRIVE");
         
-            return device;
+            return drive;
         case ATA1Reg::STATUS1:
-            reason = 0;
         case ATA1Reg::STATUS2:
             std::puts("[ATA     ] Read @ STATUS");
         
@@ -181,10 +180,40 @@ u8 readATA1(u32 addr) {
 
 void writeATA1(u32 addr, u8 data) {
     switch ((ATA1Reg)addr) {
-        case ATA1Reg::DEVICE:
-            std::printf("[ATA     ] Write @ DEVICE = 0x%02X\n", data);
+        case ATA1Reg::FEATURES:
+            std::printf("[ATA     ] Write @ FEATURES = 0x%02X\n", data);
+
+            features = data;
+            break;
+        case ATA1Reg::SECTORCOUNT:
+            std::printf("[ATA     ] Write @ SECTORCOUNT = 0x%02X\n", data);
+
+            sectorcount = data;
+            break;
+        case ATA1Reg::LBALOW:
+            std::printf("[ATA     ] Write @ LBALOW = 0x%02X\n", data);
+
+            lbalow = data;
+            break;
+        case ATA1Reg::LBAMID:
+            std::printf("[ATA     ] Write @ LBAMID = 0x%02X\n", data);
+
+            lbamid = data;
+            break;
+        case ATA1Reg::LBAHIGH:
+            std::printf("[ATA     ] Write @ LBAHIGH = 0x%02X\n", data);
+
+            lbahigh = data;
+            break;
+        case ATA1Reg::DRIVE:
+            std::printf("[ATA     ] Write @ DRIVE = 0x%02X\n", data);
         
-            device = data;
+            drive = data;
+            break;
+        case ATA1Reg::COMMAND:
+            std::printf("[ATA     ] Write @ COMMAND = 0x%02X\n", data);
+
+            command = data;
             break;
         case ATA1Reg::DEVCTL:
             std::printf("[ATA     ] Write @ DEVCTL = 0x%02X\n", data);
