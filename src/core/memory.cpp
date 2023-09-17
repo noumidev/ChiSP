@@ -341,10 +341,6 @@ void write16(u32 addr, u16 data) {
 void write32(u32 addr, u32 data) {
     addr &= (u32)MemoryBase::PAddrSpace - 1; // Mask virtual address
 
-    if (addr == 0x1C100044) {
-        writeFile("ram.bin", dram.data(), (u64)MemorySize::DRAM);
-    }
-
     if (inRange(addr, (u64)MemoryBase::SPRAM, (u64)MemorySize::SPRAM)) {
         std::memcpy(&spram[addr & ((u32)MemorySize::SPRAM - 1)], &data, sizeof(u32));
     } else if (inRange(addr, (u64)MemoryBase::EDRAM, (u64)MemorySize::EDRAM)) {
