@@ -15,7 +15,7 @@
 
 namespace psp::spock {
 
-constexpr i64 SPOCK_OP_CYCLES = 1 << 10;
+constexpr i64 SPOCK_OP_CYCLES = 20 * scheduler::_1MS;
 
 enum class SPOCKReg {
     RESET = 0x1DF00008,
