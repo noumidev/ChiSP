@@ -7,13 +7,16 @@
 
 #include <cassert>
 #include <cstdio>
+#include <queue>
 
+#include "cy27040.hpp"
 #include "intc.hpp"
 #include "scheduler.hpp"
+#include "wm8750.hpp"
 
 namespace psp::i2c {
 
-constexpr i64 I2C_OP_CYCLES = 1024;
+constexpr i64 I2C_OP_CYCLES = 20 * scheduler::_1MS;
 
 enum class I2CReg {
     UNKNOWN0 = 0x1E200000,
@@ -27,7 +30,20 @@ enum class I2CReg {
     UNKNOWN4 = 0x1E20002C,
 };
 
+namespace I2CDevice {
+    enum : u8 {
+        WM8750 = 0x34,
+        CY27040 = 0xD2,
+    };
+};
+
 u32 command, length, irqstatus;
+
+// 16 bytes each according to uofw
+u8 txData[16];
+u32 txPtr;
+
+std::queue<u8> rxQueue;
 
 u32 unknown[5];
 
@@ -51,6 +67,69 @@ void init() {
     idFinishTransfer = scheduler::registerEvent([](int) {finishTransfer();});
 }
 
+void doCommand() {
+    switch (command) {
+        case 0x85:
+            std::puts("[I2C     ] Command 0x85");
+            break;
+        case 0x87:
+            {
+                std::puts("[I2C     ] Command 0x87 (Transmit)");
+
+                // Send data to I2C device
+                const auto deviceAddr = txData[0];
+
+                switch (deviceAddr) {
+                    case I2CDevice::WM8750:
+                        wm8750::transmit(&txData[1]);
+                        break;
+                    case I2CDevice::CY27040:
+                        cy27040::transmit(&txData[1]);
+                        break;
+                    default:
+                        std::printf("Unhandled I2C address 0x%02X\n", deviceAddr);
+
+                        exit(0);
+                }
+            }
+            break;
+        case 0x8A:
+            {
+                std::puts("[I2C     ] Command 0x8A (Transmit and Receive)");
+
+                // Send data to I2C device (kernel sets bit 0; clear it)
+                const auto deviceAddr = txData[0] ^ 1;
+
+                switch (deviceAddr) {
+                    case I2CDevice::CY27040:
+                        cy27040::transmitAndReceive(&txData[1], rxQueue);
+                        break;
+                    default:
+                        std::printf("Unhandled I2C address 0x%02X\n", deviceAddr);
+
+                        exit(0);
+                }
+            }
+            break;
+        default:
+            std::printf("Unhandled I2C command 0x%02X\n", command);
+
+            exit(0);
+    }
+    
+    scheduler::addEvent(idFinishTransfer, 0, I2C_OP_CYCLES);
+}
+
+u8 getRxQueue() {
+    if (rxQueue.empty()) {
+        return 0;
+    }
+
+    const auto data = rxQueue.front(); rxQueue.pop();
+
+    return data;
+}
+
 u32 read(u32 addr) {
     switch ((I2CReg)addr) {
         case I2CReg::UNKNOWN0:
@@ -68,7 +147,7 @@ u32 read(u32 addr) {
         case I2CReg::DATA:
             std::printf("[I2C     ] Read @ DATA\n");
 
-            return 0;
+            return getRxQueue();
         case I2CReg::UNKNOWN1:
             std::printf("[I2C     ] Unknown read @ 0x%08X\n", addr);
 
@@ -99,15 +178,22 @@ void write(u32 addr, u32 data) {
 
             command = data;
 
-            scheduler::addEvent(idFinishTransfer, 0, I2C_OP_CYCLES);
+            doCommand();
             break;
         case I2CReg::LENGTH:
             std::printf("[I2C     ] Write @ LENGTH = 0x%08X\n", data);
 
+            // Actually length + 1? Doesn't matter
             length = data;
+
+            txPtr = 0;
             break;
         case I2CReg::DATA:
             std::printf("[I2C     ] Write @ DATA = 0x%08X\n", data);
+
+            assert(txPtr < sizeof(txData));
+            
+            txData[txPtr++] = data;
             break;
         case I2CReg::UNKNOWN1:
             std::printf("[I2C     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);

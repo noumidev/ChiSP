@@ -16,6 +16,7 @@ add_subdirectory(cryptopp-cmake)
 set(SOURCES
     src/main.cpp
     src/core/ata.cpp
+    src/core/cy27040.cpp
     src/core/ddr.cpp
     src/core/display.cpp
     src/core/dmacplus.cpp
@@ -30,6 +31,7 @@ set(SOURCES
     src/core/scheduler.cpp
     src/core/syscon.cpp
     src/core/systime.cpp
+    src/core/wm8750.cpp
     src/core/allegrex/allegrex.cpp
     src/core/allegrex/cop0.cpp
     src/core/allegrex/fpu.cpp
@@ -43,6 +45,7 @@ set(HEADERS
     src/common/file.hpp
     src/common/types.hpp
     src/core/ata.hpp
+    src/core/cy27040.hpp
     src/core/ddr.hpp
     src/core/display.hpp
     src/core/dmacplus.hpp
@@ -57,6 +60,7 @@ set(HEADERS
     src/core/scheduler.hpp
     src/core/syscon.hpp
     src/core/systime.hpp
+    src/core/wm8750.hpp
     src/core/allegrex/allegrex.hpp
     src/core/allegrex/cop0.hpp
     src/core/allegrex/fpu.hpp
