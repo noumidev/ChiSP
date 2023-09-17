@@ -22,7 +22,7 @@ namespace psp::ge {
 using memory::MemoryBase;
 using memory::MemorySize;
 
-constexpr auto ENABLE_DEBUG_PRINT = true;
+constexpr auto ENABLE_DEBUG_PRINT = false;
 
 enum class GEReg {
     UNKNOWN0 = 0x1D400004,
@@ -917,7 +917,7 @@ void loadCLUT() {
                     exit(0);
             }
 
-            std::printf("[GE      ] CLUT[0x%03X] = 0x%08X\n", index, clut[index]);
+            if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] CLUT[0x%03X] = 0x%08X\n", index, clut[index]);
         }
     }
 }
@@ -1046,8 +1046,8 @@ void drawTriangle(Vertex *vtxList) {
 
     if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Bounding box - [%f,%f] [%f,%f]\n", xMin, yMin, xMax, yMax);
 
-    assert(xMin < xMax);
-    assert(yMin < yMax);
+    if (xMin >= xMax) return;
+    if (yMin >= yMax) return;
 
     f32 p[2], triColors[4];
 
@@ -1188,8 +1188,8 @@ void drawSprite(Vertex *vtxList) {
 
     if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Bounding box - [%f,%f] [%f,%f]\n", xMin, yMin, xMax, yMax);
 
-    assert(xMin < xMax);
-    assert(yMin < yMax);
+    if (xMin >= xMax) return;
+    if (yMin >= yMax) return;
 
     const auto sStart = getTexCoordStart(xMin, a->s, a->m[0], b->s, b->m[0]);
     const auto tStart = getTexCoordStart(yMin, a->t, a->m[1], b->t, b->m[1]);
@@ -1197,7 +1197,7 @@ void drawSprite(Vertex *vtxList) {
     const auto sStep = getTexCoordStep(a->s, a->m[0], b->s, b->m[0]);
     const auto tStep = getTexCoordStep(a->t, a->m[1], b->t, b->m[1]);
 
-    std::printf("[GE      ] S: %f, S step: %f, T: %f, T step: %f\n", sStart, sStep, tStart, tStep);
+    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] S: %f, S step: %f, T: %f, T step: %f\n", sStart, sStep, tStart, tStep);
 
     const auto z = (u16)std::round(b->m[2]);
 
@@ -1431,7 +1431,7 @@ void drawPrim(u32 prim, u32 count) {
 
 void executeDisplayList() {
     if (pc == listaddr) {
-        std::printf("[GE      ] Executing display list @ 0x%08X, stall: 0x%08X\n", listaddr, stalladdr);
+        if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] Executing display list @ 0x%08X, stall: 0x%08X\n", listaddr, stalladdr);
     }
 
     pc &= 0x1FFFFFFF;
@@ -1456,56 +1456,56 @@ void executeDisplayList() {
 
         switch (cmd) {
             case CMD_NOP:
-                std::printf("[GE      ] [0x%08X] NOP\n", cpc);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] NOP\n", cpc);
                 break;
             case CMD_VADR:
                 vtxaddr = regs.base | (instr & 0xFFFFFF);
 
-                std::printf("[GE      ] [0x%08X] VADR 0x%08X\n", cpc, vtxaddr);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] VADR 0x%08X\n", cpc, vtxaddr);
                 break;
             case CMD_IADR:
                 idxaddr = regs.base | (instr & 0xFFFFFF);
 
-                std::printf("[GE      ] [0x%08X] IADR 0x%08X\n", cpc, idxaddr);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] IADR 0x%08X\n", cpc, idxaddr);
                 break;
             case CMD_PRIM:
-                std::printf("[GE      ] [0x%08X] PRIM %u, %u\n", cpc, (instr >> 16) & 7, instr & 0xFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] PRIM %u, %u\n", cpc, (instr >> 16) & 7, instr & 0xFFFF);
 
                 drawPrim((instr >> 16) & 7, instr & 0xFFFF);
                 break;
             case CMD_BEZIER:
-                std::printf("[GE      ] [0x%08X] BEZIER 0x%04X\n", cpc, instr & 0xFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] BEZIER 0x%04X\n", cpc, instr & 0xFFFF);
                 break;
             case CMD_SPLINE:
-                std::printf("[GE      ] [0x%08X] SPLINE 0x%05X\n", cpc, instr & 0xFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SPLINE 0x%05X\n", cpc, instr & 0xFFFFF);
                 break;
             case CMD_JUMP:
                 pc = regs.base | (instr & 0xFFFFFF);
 
-                std::printf("[GE      ] [0x%08X] JUMP 0x%08X\n", cpc, pc);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] JUMP 0x%08X\n", cpc, pc);
                 break;
             case CMD_END:
-                std::printf("[GE      ] [0x%08X] END\n", cpc);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] END\n", cpc);
 
                 isEnd = true;
 
                 scheduler::addEvent(idSendIRQ, CMDSTATUS::END, (count) ? 5 * count : 128);
                 break;
             case CMD_FINISH:
-                std::printf("[GE      ] [0x%08X] FINISH\n", cpc);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FINISH\n", cpc);
 
                 scheduler::addEvent(idSendIRQ, CMDSTATUS::FINISH, (count) ? 5 * count : 128);
                 break;
             case CMD_BASE:
                 regs.base = (instr & 0xFF0000) << 8;
 
-                std::printf("[GE      ] [0x%08X] BASE 0x%08X\n", cpc, regs.base);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] BASE 0x%08X\n", cpc, regs.base);
                 break;
             case CMD_VTYPE:
                 {
                     auto vtype = &regs.vtype;
 
-                    std::printf("[GE      ] [0x%08X] VTYPE 0x%06X\n", cpc, instr & 0xFFFFFF);
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] VTYPE 0x%06X\n", cpc, instr & 0xFFFFFF);
 
                     vtype->tt = (instr >>  0) & 3;
                     vtype->ct = (instr >>  2) & 7;
@@ -1520,78 +1520,78 @@ void executeDisplayList() {
                 }
                 break;
             case CMD_OFFSET:
-                std::printf("[GE      ] [0x%08X] OFFSET 0x%08X\n", cpc, (instr & 0xFFFFFF) << 8);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] OFFSET 0x%08X\n", cpc, (instr & 0xFFFFFF) << 8);
                 break;
             case CMD_ORIGIN:
-                std::printf("[GE      ] [0x%08X] ORIGIN\n", cpc);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ORIGIN\n", cpc);
                 break;
             case CMD_REGION1:
-                std::printf("[GE      ] [0x%08X] REGION1 0x%05X\n", cpc, instr & 0xFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] REGION1 0x%05X\n", cpc, instr & 0xFFFFF);
                 break;
             case CMD_REGION2:
-                std::printf("[GE      ] [0x%08X] REGION2 0x%05X\n", cpc, instr & 0xFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] REGION2 0x%05X\n", cpc, instr & 0xFFFFF);
                 break;
             case CMD_LTE:
-                std::printf("[GE      ] [0x%08X] LTE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LTE %u\n", cpc, instr & 1);
                 break;
             case CMD_LE0:
             case CMD_LE1:
             case CMD_LE2:
             case CMD_LE3:
-                std::printf("[GE      ] [0x%08X] LE%d %u\n", cpc, cmd - CMD_LE0, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LE%d %u\n", cpc, cmd - CMD_LE0, instr & 1);
                 break;
             case CMD_CLE:
-                std::printf("[GE      ] [0x%08X] CLE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CLE %u\n", cpc, instr & 1);
                 break;
             case CMD_BCE:
-                std::printf("[GE      ] [0x%08X] BCE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] BCE %u\n", cpc, instr & 1);
                 break;
             case CMD_TME:
-                std::printf("[GE      ] [0x%08X] TME %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TME %u\n", cpc, instr & 1);
 
                 regs.tme = instr & 1;
                 break;
             case CMD_FGE:
-                std::printf("[GE      ] [0x%08X] FGE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FGE %u\n", cpc, instr & 1);
                 break;
             case CMD_DTE:
-                std::printf("[GE      ] [0x%08X] DTE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] DTE %u\n", cpc, instr & 1);
                 break;
             case CMD_ABE:
-                std::printf("[GE      ] [0x%08X] ABE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ABE %u\n", cpc, instr & 1);
                 break;
             case CMD_ATE:
-                std::printf("[GE      ] [0x%08X] ATE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ATE %u\n", cpc, instr & 1);
                 break;
             case CMD_ZTE:
-                std::printf("[GE      ] [0x%08X] ZTE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ZTE %u\n", cpc, instr & 1);
 
                 regs.zte = instr & 1;
                 break;
             case CMD_STE:
-                std::printf("[GE      ] [0x%08X] STE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] STE %u\n", cpc, instr & 1);
                 break;
             case CMD_AAE:
-                std::printf("[GE      ] [0x%08X] AAE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] AAE %u\n", cpc, instr & 1);
                 break;
             case CMD_PCE:
-                std::printf("[GE      ] [0x%08X] PCE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] PCE %u\n", cpc, instr & 1);
                 break;
             case CMD_CTE:
-                std::printf("[GE      ] [0x%08X] CTE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CTE %u\n", cpc, instr & 1);
                 break;
             case CMD_LOE:
-                std::printf("[GE      ] [0x%08X] LOE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LOE %u\n", cpc, instr & 1);
                 break;
             case CMD_BONEN:
-                std::printf("[GE      ] [0x%08X] BONEN 0x%02X\n", cpc, instr & 0x3F);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] BONEN 0x%02X\n", cpc, instr & 0x3F);
 
                 bonen = instr & 0x3F;
                 break;
             case CMD_BONED:
                 bone[bonen++] = toFloat(instr << 8);
             
-                std::printf("[GE      ] [0x%08X] BONED %f\n", cpc, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] BONED %f\n", cpc, toFloat(instr << 8));
                 break;
             case CMD_WEIGHT0:
             case CMD_WEIGHT1:
@@ -1606,161 +1606,161 @@ void executeDisplayList() {
 
                     regs.weight[idx] = toFloat(instr << 8);
 
-                    std::printf("[GE      ] [0x%08X] WEIGHT%d %f\n", cpc, idx, regs.weight[idx]);
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] WEIGHT%d %f\n", cpc, idx, regs.weight[idx]);
                 }
                 break;
             case CMD_DIVIDE:
-                std::printf("[GE      ] [0x%08X] DIVIDE 0x%04X\n", cpc, instr & 0x7FFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] DIVIDE 0x%04X\n", cpc, instr & 0x7FFF);
                 break;
             case CMD_PPM:
-                std::printf("[GE      ] [0x%08X] PPM %u\n", cpc, instr & 3);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] PPM %u\n", cpc, instr & 3);
                 break;
             case CMD_PFACE:
-                std::printf("[GE      ] [0x%08X] PFACE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] PFACE %u\n", cpc, instr & 1);
                 break;
             case CMD_WORLDN:
-                std::printf("[GE      ] [0x%08X] WORLDN %u\n", cpc, instr & 0xF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] WORLDN %u\n", cpc, instr & 0xF);
 
                 worldn = instr & 0xF;
                 break;
             case CMD_WORLDD:
                 world[worldn++] = toFloat(instr << 8);
             
-                std::printf("[GE      ] [0x%08X] WORLDD %f\n", cpc, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] WORLDD %f\n", cpc, toFloat(instr << 8));
                 break;
             case CMD_VIEWN:
-                std::printf("[GE      ] [0x%08X] VIEWN %u\n", cpc, instr & 0xF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] VIEWN %u\n", cpc, instr & 0xF);
 
                 viewn = instr & 0xF;
                 break;
             case CMD_VIEWD:
                 view[viewn++] = toFloat(instr << 8);
             
-                std::printf("[GE      ] [0x%08X] VIEWD %f\n", cpc, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] VIEWD %f\n", cpc, toFloat(instr << 8));
                 break;
             case CMD_PROJN:
-                std::printf("[GE      ] [0x%08X] PROJN %u\n", cpc, instr & 0xF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] PROJN %u\n", cpc, instr & 0xF);
 
                 projn = instr & 0xF;
                 break;
             case CMD_PROJD:
                 proj[projn++] = toFloat(instr << 8);
             
-                std::printf("[GE      ] [0x%08X] PROJD %f\n", cpc, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] PROJD %f\n", cpc, toFloat(instr << 8));
                 break;
             case CMD_TGENN:
-                std::printf("[GE      ] [0x%08X] TGENN %u\n", cpc, instr & 0xF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TGENN %u\n", cpc, instr & 0xF);
 
                 tgenn = instr & 0xF;
                 break;
             case CMD_TGEND:
                 tgen[tgenn++] = toFloat(instr << 8);
             
-                std::printf("[GE      ] [0x%08X] TGEND %f\n", cpc, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TGEND %f\n", cpc, toFloat(instr << 8));
                 break;
             case CMD_SX:
                 regs.s[0] = toFloat(instr << 8);
 
-                std::printf("[GE      ] [0x%08X] SX %f\n", cpc, regs.s[0]);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SX %f\n", cpc, regs.s[0]);
                 break;
             case CMD_SY:
                 regs.s[1] = toFloat(instr << 8);
                 
-                std::printf("[GE      ] [0x%08X] SY %f\n", cpc, regs.s[1]);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SY %f\n", cpc, regs.s[1]);
                 break;
             case CMD_SZ:
                 regs.s[2] = toFloat(instr << 8);
                 
-                std::printf("[GE      ] [0x%08X] SZ %f\n", cpc, regs.s[2]);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SZ %f\n", cpc, regs.s[2]);
                 break;
             case CMD_TX:
                 regs.t[0] = toFloat(instr << 8);
 
-                std::printf("[GE      ] [0x%08X] TX %f\n", cpc, regs.t[0]);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TX %f\n", cpc, regs.t[0]);
                 break;
             case CMD_TY:
                 regs.t[1] = toFloat(instr << 8);
                 
-                std::printf("[GE      ] [0x%08X] TY %f\n", cpc, regs.t[1]);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TY %f\n", cpc, regs.t[1]);
                 break;
             case CMD_TZ:
                 regs.t[2] = toFloat(instr << 8);
                 
-                std::printf("[GE      ] [0x%08X] TZ %f\n", cpc, regs.t[2]);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TZ %f\n", cpc, regs.t[2]);
                 break;
             case CMD_SU:
                 regs.su = toFloat(instr << 8);
                 
-                std::printf("[GE      ] [0x%08X] SU %f\n", cpc, regs.su);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SU %f\n", cpc, regs.su);
                 break;
             case CMD_SV:
                 regs.sv = toFloat(instr << 8);
                 
-                std::printf("[GE      ] [0x%08X] SV %f\n", cpc, regs.sv);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SV %f\n", cpc, regs.sv);
                 break;
             case CMD_TU:
                 regs.tu = toFloat(instr << 8);
                 
-                std::printf("[GE      ] [0x%08X] TU %f\n", cpc, regs.tu);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TU %f\n", cpc, regs.tu);
                 break;
             case CMD_TV:
                 regs.tv = toFloat(instr << 8);
                 
-                std::printf("[GE      ] [0x%08X] TV %f\n", cpc, regs.tv);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TV %f\n", cpc, regs.tv);
                 break;
             case CMD_OFFSETX:
                 regs.offsetx = ((f32)(u16)instr) / 16.0;
 
-                std::printf("[GE      ] [0x%08X] OFFSETX %f\n", cpc, regs.offsetx);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] OFFSETX %f\n", cpc, regs.offsetx);
                 break;
             case CMD_OFFSETY:
                 regs.offsety = ((f32)(u16)instr) / 16.0;
 
-                std::printf("[GE      ] [0x%08X] OFFSETY %f\n", cpc, regs.offsety);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] OFFSETY %f\n", cpc, regs.offsety);
                 break;
             case CMD_SHADE:
-                std::printf("[GE      ] [0x%08X] SHADE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SHADE %u\n", cpc, instr & 1);
 
                 regs.iip = instr & 1;
                 break;
             case CMD_NREV:
-                std::printf("[GE      ] [0x%08X] NREV %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] NREV %u\n", cpc, instr & 1);
                 break;
             case CMD_MATERIAL:
-                std::printf("[GE      ] [0x%08X] MATERIAL %u\n", cpc, instr & 7);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MATERIAL %u\n", cpc, instr & 7);
                 break;
             case CMD_MEC:
-                std::printf("[GE      ] [0x%08X] MEC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MEC 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_MAC:
-                std::printf("[GE      ] [0x%08X] MAC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MAC 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_MDC:
-                std::printf("[GE      ] [0x%08X] MDC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MDC 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_MSC:
-                std::printf("[GE      ] [0x%08X] MSC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MSC 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_MAA:
-                std::printf("[GE      ] [0x%08X] MAA 0x%02X\n", cpc, instr & 0xFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MAA 0x%02X\n", cpc, instr & 0xFF);
                 break;
             case CMD_MK:
-                std::printf("[GE      ] [0x%08X] MK 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MK 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_AC:
-                std::printf("[GE      ] [0x%08X] AC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] AC 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_AA:
-                std::printf("[GE      ] [0x%08X] AA 0x%02X\n", cpc, instr & 0xFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] AA 0x%02X\n", cpc, instr & 0xFF);
                 break;
             case CMD_LMODE:
-                std::printf("[GE      ] [0x%08X] LMODE %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LMODE %u\n", cpc, instr & 1);
                 break;
             case CMD_LTYPE0:
             case CMD_LTYPE1:
             case CMD_LTYPE2:
             case CMD_LTYPE3:
-                std::printf("[GE      ] [0x%08X] LTYPE%d 0x%03X\n", cpc, cmd - CMD_LTYPE0, instr & 0x3FF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LTYPE%d 0x%03X\n", cpc, cmd - CMD_LTYPE0, instr & 0x3FF);
                 break;
             case CMD_LX0:
             case CMD_LY0:
@@ -1778,7 +1778,7 @@ void executeDisplayList() {
                     const auto coord = (cmd - CMD_LX0) % 3;
                     const auto idx = (cmd - CMD_LX0) / 3;
 
-                    std::printf("[GE      ] [0x%08X] L%c%d %f\n", cpc, 'X' + coord, idx, toFloat(instr << 8));
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] L%c%d %f\n", cpc, 'X' + coord, idx, toFloat(instr << 8));
                 }
                 break;
             case CMD_LDX0:
@@ -1797,7 +1797,7 @@ void executeDisplayList() {
                     const auto coord = (cmd - CMD_LDX0) % 3;
                     const auto idx = (cmd - CMD_LDX0) / 3;
 
-                    std::printf("[GE      ] [0x%08X] LD%c%d %f\n", cpc, 'X' + coord, idx, toFloat(instr << 8));
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LD%c%d %f\n", cpc, 'X' + coord, idx, toFloat(instr << 8));
                 }
                 break;
             case CMD_LKA0:
@@ -1816,20 +1816,20 @@ void executeDisplayList() {
                     const auto coord = (cmd - CMD_LKA0) % 3;
                     const auto idx = (cmd - CMD_LKA0) / 3;
 
-                    std::printf("[GE      ] [0x%08X] LK%c%d %f\n", cpc, 'A' + coord, idx, toFloat(instr << 8));
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LK%c%d %f\n", cpc, 'A' + coord, idx, toFloat(instr << 8));
                 }
                 break;
             case CMD_LKS0:
             case CMD_LKS1:
             case CMD_LKS2:
             case CMD_LKS3:
-                std::printf("[GE      ] [0x%08X] LKS%d %f\n", cpc, cmd - CMD_LKS0, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LKS%d %f\n", cpc, cmd - CMD_LKS0, toFloat(instr << 8));
                 break;
             case CMD_LKO0:
             case CMD_LKO1:
             case CMD_LKO2:
             case CMD_LKO3:
-                std::printf("[GE      ] [0x%08X] LKO%d %f\n", cpc, cmd - CMD_LKO0, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LKO%d %f\n", cpc, cmd - CMD_LKO0, toFloat(instr << 8));
                 break;
             case CMD_LAC0:
             case CMD_LDC0:
@@ -1849,33 +1849,33 @@ void executeDisplayList() {
                     const auto compIdx = (cmd - CMD_LAC0) % 3;
                     const auto idx = (cmd - CMD_LAC0) / 3;
 
-                    std::printf("[GE      ] [0x%08X] L%cC%d %f\n", cpc, comp[compIdx], idx, toFloat(instr << 8));
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] L%cC%d %f\n", cpc, comp[compIdx], idx, toFloat(instr << 8));
                 }
                 break;
             case CMD_CULL:
-                std::printf("[GE      ] [0x%08X] CULL %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CULL %u\n", cpc, instr & 1);
                 break;
             case CMD_FBP:
                 regs.fbp = instr & 0xFFE000;
 
-                std::printf("[GE      ] [0x%08X] FBP 0x%08X\n", cpc, regs.fbp);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FBP 0x%08X\n", cpc, regs.fbp);
                 break;
             case CMD_FBW:
                 regs.fbw  = instr & 0x7C0;
                 regs.fbp |= (instr & 0xFF0000) << 8;
 
-                std::printf("[GE      ] [0x%08X] FBW 0x%08X, %u\n", cpc, regs.fbp, regs.fbw);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FBW 0x%08X, %u\n", cpc, regs.fbp, regs.fbw);
                 break;
             case CMD_ZBP:
                 regs.zbp = instr & 0xFFE000;
 
-                std::printf("[GE      ] [0x%08X] ZBP 0x%08X\n", cpc, regs.zbp);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ZBP 0x%08X\n", cpc, regs.zbp);
                 break;
             case CMD_ZBW:
                 regs.zbw  = instr & 0x7C0;
                 regs.zbp |= (instr & 0xFF0000) << 8;
 
-                std::printf("[GE      ] [0x%08X] ZBW 0x%08X, %u\n", cpc, regs.zbp, regs.zbw);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ZBW 0x%08X, %u\n", cpc, regs.zbp, regs.zbw);
                 break;
             case CMD_TBP0:
             case CMD_TBP1:
@@ -1890,7 +1890,7 @@ void executeDisplayList() {
 
                     regs.tbp[idx] = instr & 0xFFFFF0;
 
-                    std::printf("[GE      ] [0x%08X] TBP%d 0x%08X\n", cpc, idx, regs.tbp[idx]);
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TBP%d 0x%08X\n", cpc, idx, regs.tbp[idx]);
                 }
                 break;
             case CMD_TBW0:
@@ -1907,30 +1907,30 @@ void executeDisplayList() {
                     regs.tbw[idx]  = instr & 0x7FF;
                     regs.tbp[idx] |= (instr & 0xFF0000) << 8;
 
-                    std::printf("[GE      ] [0x%08X] TBW%d 0x%08X, %u\n", cpc, idx, regs.tbp[idx], regs.tbw[idx]);
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TBW%d 0x%08X, %u\n", cpc, idx, regs.tbp[idx], regs.tbw[idx]);
                 }
                 break;
             case CMD_CBP:
                 regs.cbp = instr & 0xFFFFF0;
 
-                std::printf("[GE      ] [0x%08X] CBP 0x%08X\n", cpc, regs.cbp);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CBP 0x%08X\n", cpc, regs.cbp);
                 break;
             case CMD_CBW:
                 regs.cbp |= (instr & 0xFF0000) << 8;
 
-                std::printf("[GE      ] [0x%08X] CBW 0x%08X\n", cpc, regs.cbp);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CBW 0x%08X\n", cpc, regs.cbp);
                 break;
             case CMD_XBP1:
-                std::printf("[GE      ] [0x%08X] XBP1 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] XBP1 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_XBW1:
-                std::printf("[GE      ] [0x%08X] XBW1 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] XBW1 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_XBP2:
-                std::printf("[GE      ] [0x%08X] XBP2 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] XBP2 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_XBW2:
-                std::printf("[GE      ] [0x%08X] XBW2 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] XBW2 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_TSIZE0:
             case CMD_TSIZE1:
@@ -1946,35 +1946,35 @@ void executeDisplayList() {
                     regs.tw[idx] = (f32)(1 << ((instr >> 0) & 0xF));
                     regs.th[idx] = (f32)(1 << ((instr >> 8) & 0xF));
 
-                    std::printf("[GE      ] [0x%08X] TSIZE%u %f, %f\n", cpc, idx, regs.tw[idx], regs.th[idx]);
+                    if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TSIZE%u %f, %f\n", cpc, idx, regs.tw[idx], regs.th[idx]);
                 }
                 break;
             case CMD_TMAP:
                 regs.tmn = (instr >> 0) & 3;
                 regs.tmi = (instr >> 8) & 3;
 
-                std::printf("[GE      ] [0x%08X] TMAP %u, %u\n", cpc, regs.tmn, regs.tmi);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TMAP %u, %u\n", cpc, regs.tmn, regs.tmi);
                 break;
             case CMD_TSHADE:
-                std::printf("[GE      ] [0x%08X] TSHADE 0x%03X\n", cpc, instr & 0x3FF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TSHADE 0x%03X\n", cpc, instr & 0x3FF);
                 break;
             case CMD_TMODE:
                 regs.hsm = instr & 1;
                 regs.mc = instr & (1 << 8);
                 regs.mxl = (instr >> 16) & 7;
 
-                std::printf("[GE      ] [0x%08X] TMODE %d, %d, %u\n", cpc, regs.hsm, regs.mc, regs.mxl);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TMODE %d, %d, %u\n", cpc, regs.hsm, regs.mc, regs.mxl);
                 break;
             case CMD_TPF:
                 regs.tpf = instr & 0xF;
                 regs.ext = instr & (1 << 8);
 
-                std::printf("[GE      ] [0x%08X] TPF %u, %d\n", cpc, regs.tpf, regs.ext);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TPF %u, %d\n", cpc, regs.tpf, regs.ext);
                 break;
             case CMD_CLOAD:
                 regs.np = instr & 0x3F;
 
-                std::printf("[GE      ] [0x%08X] CLOAD %u\n", cpc, regs.np);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CLOAD %u\n", cpc, regs.np);
 
                 if (regs.cbp) loadCLUT();
                 break;
@@ -1984,52 +1984,52 @@ void executeDisplayList() {
                 regs.msk = (instr >>  8) & 0xFF;
                 regs.csa = (instr >> 16) & 0x1F;
 
-                std::printf("[GE      ] [0x%08X] CLUT %u, %u, 0x%02X, 0x%X\n", cpc, regs.cpf, regs.sft, regs.msk, regs.csa);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CLUT %u, %u, 0x%02X, 0x%X\n", cpc, regs.cpf, regs.sft, regs.msk, regs.csa);
                 break;
             case CMD_TFILTER:
-                std::printf("[GE      ] [0x%08X] TFILTER 0x%03X\n", cpc, instr & 0x1FF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TFILTER 0x%03X\n", cpc, instr & 0x1FF);
                 break;
             case CMD_TWRAP:
                 regs.twms = instr & (1 << 0);
                 regs.twmt = instr & (1 << 8);
 
-                std::printf("[GE      ] [0x%08X] TWRAP %d, %d\n", cpc, regs.twms, regs.twmt);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TWRAP %d, %d\n", cpc, regs.twms, regs.twmt);
                 break;
             case CMD_TLEVEL:
-                std::printf("[GE      ] [0x%08X] TLEVEL 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TLEVEL 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_TFUNC:
                 regs.txf = instr & 7;
                 regs.tcc = instr & (1 <<  0);
                 regs.cd  = instr & (1 << 16);
 
-                std::printf("[GE      ] [0x%08X] TFUNC %u, %d, %d\n", cpc, regs.txf, regs.tcc, regs.cd);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TFUNC %u, %d, %d\n", cpc, regs.txf, regs.tcc, regs.cd);
                 break;
             case CMD_TEC:
                 regs.tec[0] = (f32)((instr >>  0) & 0xFF);
                 regs.tec[1] = (f32)((instr >>  8) & 0xFF);
                 regs.tec[2] = (f32)((instr >> 16) & 0xFF);
 
-                std::printf("[GE      ] [0x%08X] TEC %f, %f, %f\n", cpc, regs.tec[0], regs.tec[1], regs.tec[2]);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TEC %f, %f, %f\n", cpc, regs.tec[0], regs.tec[1], regs.tec[2]);
                 break;
             case CMD_TFLUSH:
-                std::printf("[GE      ] [0x%08X] TFLUSH\n", cpc);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TFLUSH\n", cpc);
                 break;
             case CMD_TSYNC:
-                std::printf("[GE      ] [0x%08X] TSYNC\n", cpc);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TSYNC\n", cpc);
                 break;
             case CMD_FOG1:
             case CMD_FOG2:
-                std::printf("[GE      ] [0x%08X] FOG%d %f\n", cpc, 1 + cmd - CMD_FOG1, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FOG%d %f\n", cpc, 1 + cmd - CMD_FOG1, toFloat(instr << 8));
                 break;
             case CMD_FC:
-                std::printf("[GE      ] [0x%08X] FC 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FC 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_TSLOPE:
-                std::printf("[GE      ] [0x%08X] TSLOPE %f\n", cpc, toFloat(instr << 8));
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] TSLOPE %f\n", cpc, toFloat(instr << 8));
                 break;
             case CMD_FPF:
-                std::printf("[GE      ] [0x%08X] FPF %u\n", cpc, instr & 3);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FPF %u\n", cpc, instr & 3);
 
                 regs.fpf = instr & 3;
                 break;
@@ -2039,86 +2039,86 @@ void executeDisplayList() {
                 regs.aen = instr & (1 <<  9);
                 regs.zen = instr & (1 << 10);
 
-                std::printf("[GE      ] [0x%08X] CMODE %d, %d, %d, %d\n", cpc, regs.set, regs.cen, regs.aen, regs.zen);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CMODE %d, %d, %d, %d\n", cpc, regs.set, regs.cen, regs.aen, regs.zen);
                 break;
             case CMD_SCISSOR1:
                 regs.sx1 = (f32)((instr >>  0) & 0x3FF);
                 regs.sy1 = (f32)((instr >> 10) & 0x3FF);
 
-                std::printf("[GE      ] [0x%08X] SCISSOR1 %f, %f\n", cpc, regs.sx1, regs.sy1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SCISSOR1 %f, %f\n", cpc, regs.sx1, regs.sy1);
                 break;
             case CMD_SCISSOR2:
                 regs.sx2 = (f32)((instr >>  0) & 0x3FF);
                 regs.sy2 = (f32)((instr >> 10) & 0x3FF);
 
-                std::printf("[GE      ] [0x%08X] SCISSOR2 %f, %f\n", cpc, regs.sx2, regs.sy2);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SCISSOR2 %f, %f\n", cpc, regs.sx2, regs.sy2);
                 break;
             case CMD_MINZ:
-                std::printf("[GE      ] [0x%08X] MINZ 0x%04X\n", cpc, instr & 0xFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MINZ 0x%04X\n", cpc, instr & 0xFFFF);
 
                 regs.minz = instr & 0xFFFF;
                 break;
             case CMD_MAXZ:
-                std::printf("[GE      ] [0x%08X] MAXZ 0x%04X\n", cpc, instr & 0xFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] MAXZ 0x%04X\n", cpc, instr & 0xFFFF);
 
                 regs.maxz = instr & 0xFFFF;
                 break;
             case CMD_CTEST:
-                std::printf("[GE      ] [0x%08X] CTEST %u\n", cpc, instr & 3);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CTEST %u\n", cpc, instr & 3);
                 break;
             case CMD_CREF:
-                std::printf("[GE      ] [0x%08X] CREF 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CREF 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_CMSK:
-                std::printf("[GE      ] [0x%08X] CMSK 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] CMSK 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_ATEST:
-                std::printf("[GE      ] [0x%08X] ATEST 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ATEST 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_STEST:
-                std::printf("[GE      ] [0x%08X] STEST 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] STEST 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_SOP:
-                std::printf("[GE      ] [0x%08X] SOP 0x%05X\n", cpc, instr & 0x7FFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] SOP 0x%05X\n", cpc, instr & 0x7FFFF);
                 break;
             case CMD_ZTEST:
-                std::printf("[GE      ] [0x%08X] ZTEST %u\n", cpc, instr & 7);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ZTEST %u\n", cpc, instr & 7);
 
                 regs.ztf = instr & 7;
                 break;
             case CMD_BLEND:
-                std::printf("[GE      ] [0x%08X] BLEND 0x%04X\n", cpc, instr & 0x7FFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] BLEND 0x%04X\n", cpc, instr & 0x7FFF);
                 break;
             case CMD_FIXA:
-                std::printf("[GE      ] [0x%08X] FIXA 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FIXA 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_FIXB:
-                std::printf("[GE      ] [0x%08X] FIXB 0x%06X\n", cpc, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] FIXB 0x%06X\n", cpc, instr & 0xFFFFFF);
                 break;
             case CMD_DITH1:
             case CMD_DITH2:
             case CMD_DITH3:
             case CMD_DITH4:
-                std::printf("[GE      ] [0x%08X] DITH%u 0x%06X\n", cpc, 1 + cmd - CMD_DITH1, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] DITH%u 0x%06X\n", cpc, 1 + cmd - CMD_DITH1, instr & 0xFFFFFF);
                 break;
             case CMD_LOP:
-                std::printf("[GE      ] [0x%08X] LOP 0x%X\n", cpc, instr & 0xF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] LOP 0x%X\n", cpc, instr & 0xF);
                 break;
             case CMD_ZMSK:
-                std::printf("[GE      ] [0x%08X] ZMSK %u\n", cpc, instr & 1);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] ZMSK %u\n", cpc, instr & 1);
 
                 regs.zmsk = instr & 1;
                 break;
             case CMD_PMSK1:
             case CMD_PMSK2:
-                std::printf("[GE      ] [0x%08X] PMSK%u 0x%06X\n", cpc, 1 + cmd - CMD_PMSK1, instr & 0xFFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] PMSK%u 0x%06X\n", cpc, 1 + cmd - CMD_PMSK1, instr & 0xFFFFFF);
                 break;
             case CMD_XPOS1:
             case CMD_XPOS2:
-                std::printf("[GE      ] [0x%08X] XPOS%u 0x%05X\n", cpc, 1 + cmd - CMD_XPOS1, instr & 0xFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] XPOS%u 0x%05X\n", cpc, 1 + cmd - CMD_XPOS1, instr & 0xFFFFF);
                 break;
             case CMD_XSIZE:
-                std::printf("[GE      ] [0x%08X] XSIZE 0x%05X\n", cpc, instr & 0xFFFFF);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] XSIZE 0x%05X\n", cpc, instr & 0xFFFFF);
                 break;
             case 0xF0:
             case 0xF1:
@@ -2131,7 +2131,7 @@ void executeDisplayList() {
             case 0xF8:
             case 0xF9:
             case 0xFF:
-                std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
+                if (ENABLE_DEBUG_PRINT) std::printf("[GE      ] [0x%08X] Command 0x%02X (0x%08X)\n", cpc, cmd, instr);
                 break;
             default:
                 std::printf("Unhandled GE command 0x%02X (0x%08X) @ 0x%08X\n", cmd, instr, cpc);
