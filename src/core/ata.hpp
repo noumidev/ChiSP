@@ -12,12 +12,15 @@ namespace psp::ata {
 void init(const char *path);
 
 // ATA0
-u32  readATA0 (u32 addr);
-void writeATA0(u32 addr, u32 data);
+u32  ata0Read (u32 addr);
+void ata0Write(u32 addr, u32 data);
 
 // ATA1
-u8   readATA1 (u32 addr);
-void writeATA1(u32 addr, u8 data);
+u8  ata1Read8(u32 addr);
+u16 ata1Read16(u32 addr);
+
+void ata1Write8 (u32 addr, u8  data);
+void ata1Write16(u32 addr, u16 data);
 
 bool isUMDInserted();
 

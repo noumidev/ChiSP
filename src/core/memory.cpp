@@ -91,7 +91,7 @@ u8 read8(u32 addr) {
 
         return 0;
     } else if (inRange(addr, (u64)MemoryBase::ATA1, (u64)MemorySize::ATA1)) {
-        return ata::readATA1(addr);
+        return ata::ata1Read8(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         return resetVector[addr & (resetSize - 1)];
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -125,6 +125,8 @@ u16 read16(u32 addr) {
         std::printf("[WLAN    ] Unhandled read16 @ 0x%08X\n", addr);
 
         return 0;
+    } else if (inRange(addr, (u64)MemoryBase::ATA1, (u64)MemorySize::ATA1)) {
+        return ata::ata1Read16(addr);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         std::memcpy(&data, &resetVector[addr & (resetSize - 1)], sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -196,7 +198,7 @@ u32 read32(u32 addr) {
     } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
         return ge::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::ATA0, (u64)MemorySize::ATA0)) {
-        return ata::readATA0(addr);
+        return ata::ata0Read(addr);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::read(addr);
     } else if (inRange(addr, (u64)MemoryBase::SPOCK, (u64)MemorySize::SPOCK)) {
@@ -296,7 +298,7 @@ void write8(u32 addr, u8 data) {
     } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
         std::printf("[WLAN    ] Unhandled write8 @ 0x%08X = 0x%02X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::ATA1, (u64)MemorySize::ATA1)) {
-        return ata::writeATA1(addr, data);
+        return ata::ata1Write8(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         resetVector[addr & (resetSize - 1)] = data;
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -324,6 +326,8 @@ void write16(u32 addr, u16 data) {
         std::printf("[MS      ] Unhandled write16 @ 0x%08X = 0x%04X\n", addr, data);
     } else if (inRange(addr, (u64)MemoryBase::WLAN, (u64)MemorySize::WLAN)) {
         std::printf("[WLAN    ] Unhandled write16 @ 0x%08X = 0x%04X\n", addr, data);
+    } else if (inRange(addr, (u64)MemoryBase::ATA1, (u64)MemorySize::ATA1)) {
+        return ata::ata1Write16(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::BootROM, resetSize)) {
         std::memcpy(&resetVector[addr & (resetSize - 1)], &data, sizeof(u16));
     } else if (inRange(addr, (u64)MemoryBase::SharedRAM, (u64)MemorySize::EDRAM)) {
@@ -374,7 +378,7 @@ void write32(u32 addr, u32 data) {
     } else if (inRange(addr, (u64)MemoryBase::GE, (u64)MemorySize::GE)) {
         return ge::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::ATA0, (u64)MemorySize::ATA0)) {
-        return ata::writeATA0(addr, data);
+        return ata::ata0Write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::KIRK, (u64)MemorySize::KIRK)) {
         return kirk::write(addr, data);
     } else if (inRange(addr, (u64)MemoryBase::SPOCK, (u64)MemorySize::SPOCK)) {
