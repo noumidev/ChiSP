@@ -53,6 +53,7 @@ namespace ATAStatus {
 
 namespace ATAInterrupt {
     enum : u8 {
+        CD = 1 << 0,
         IO = 1 << 1,
     };
 }
@@ -63,8 +64,9 @@ namespace ATAPICommand {
     };
 };
 
-namespace PACKETCommand {
+namespace SCSICommand {
     enum : u8 {
+        TEST_UNIT_READY = 0x00,
         INQUIRY = 0x12,
     };
 };
@@ -86,10 +88,10 @@ u32 length;
 
 FILE *umd = NULL;
 
-u64 idFinishCommand;
+u64 idFinishSCSICommand;
 
 void sendIRQ(u8 irq) {
-    sectorcount |= irq;
+    sectorcount = irq;
 
     intc::sendIRQ(intc::InterruptSource::ATAPI);
 }
@@ -98,17 +100,18 @@ void clearIRQ() {
     intc::clearIRQ(intc::InterruptSource::ATAPI);
 }
 
-void startCommand(int cyclesUntilEvent) {
+void startSCSICommand(int cyclesUntilEvent) {
     status |= ATAStatus::DEVICE_BUSY;
-    status &= ~ATAStatus::DEVICE_READY;
 
-    scheduler::addEvent(idFinishCommand, 0, cyclesUntilEvent);
+    scheduler::addEvent(idFinishSCSICommand, 0, cyclesUntilEvent);
 }
 
-void finishCommand() {
+void finishSCSICommand() {
     // Set command length
     lbamid = length & 0xFF;
     lbahigh = (length >> 8) & 0xFF;
+
+    error = 0;
 
     status |= ATAStatus::DATA_REQUEST;
     status |= ATAStatus::DEVICE_READY;
@@ -129,7 +132,7 @@ void reset() {
 void init(const char *path) {
     std::puts("[ATA     ] OK");
 
-    idFinishCommand = scheduler::registerEvent([](int) {finishCommand();});
+    idFinishSCSICommand = scheduler::registerEvent([](int) {finishSCSICommand();});
 
     umd = std::fopen(path, "rb");
 
@@ -169,12 +172,14 @@ u16 getOutQueue() {
 
     if (outQueue.empty()) {
         status &= ~ATAStatus::DATA_REQUEST;
+
+        sendIRQ(ATAInterrupt::CD | ATAInterrupt::IO);
     }
 
     return data;
 }
 
-void cmdInquiry() {
+void scsiCmdInquiry() {
     length = discardAndGetInQueue(3);
 
     std::printf("[ATA     ] INQUIRY, length: 0x%02X\n", length);
@@ -190,39 +195,60 @@ void cmdInquiry() {
     outQueue.push(0x00);
     outQueue.push(0x00);
 
-    constexpr const char DRIVE_ID[] = "SCEI    UMD ROM DRIVE       1.090 Oct18 ,2004   ";
+    // Drive ID taken from my PSP
+    constexpr const char DRIVE_ID[] = "SCEI    UMD ROM DRIVE       1.150AAug30 ,2005   ";
 
     for (size_t i = 0; i < (sizeof(DRIVE_ID) - 1); i++) {
         outQueue.push(DRIVE_ID[i]);
     }
 
-    startCommand(2000 * scheduler::_1US);
+    // INQUIRY takes about 2ms
+    startSCSICommand(2000 * scheduler::_1US);
+}
+
+void scsiCmdTestUnitReady() {
+    std::printf("[ATA     ] TEST_UNIT_READY\n");
+
+    // Note: I think this doesn't do anything if the logical unit is ready??
+
+    // TODO: test command duration
+    startSCSICommand(2000 * scheduler::_1US);
 }
 
 void doCommand() {
     switch (command) {
         case ATAPICommand::PACKET:
-            {
-                const auto subcommand = inQueue.front(); inQueue.pop();
+            std::puts("[ATA     ] PACKET");
 
-                std::puts("[ATA     ] PACKET");
+            // Update command block
+            status = ATAStatus::DEVICE_READY | ATAStatus::DATA_REQUEST;
 
-                switch (subcommand) {
-                    case PACKETCommand::INQUIRY:
-                        cmdInquiry();
-                        break;
-                    default:
-                        std::printf("Unhandled ATAPI PACKET command 0x%02X\n", subcommand);
-
-                        exit(0);
-                }
-            }
+            sendIRQ(ATAInterrupt::CD);
             break;
         default:
-            std::printf("Unhandled ATAPI command 0x%02X\n", command);
+            std::printf("Unhandled ATA command 0x%02X\n", command);
 
             exit(0);
     }
+}
+
+void doSCSICommand() {
+    const auto scsiCommand = inQueue.front(); inQueue.pop();
+
+    switch (scsiCommand) {
+        case SCSICommand::TEST_UNIT_READY:
+            scsiCmdTestUnitReady();
+            break;
+        case SCSICommand::INQUIRY:
+            scsiCmdInquiry();
+            break;
+        default:
+            std::printf("Unhandled SCSI command 0x%02X\n", scsiCommand);
+
+            exit(0);
+    }
+
+    clearInQueue();
 }
 
 u32 ata0Read(u32 addr) {
@@ -377,11 +403,13 @@ void ata1Write8(u32 addr, u8 data) {
             std::printf("[ATA     ] Write @ COMMAND = 0x%02X\n", data);
 
             command = data;
+
+            doCommand();
             break;
         case ATA1Reg::ENDOFDATA:
             std::printf("[ATA     ] Write @ ENDOFDATA = 0x%02X\n", data);
 
-            doCommand();
+            doSCSICommand();
             break;
         case ATA1Reg::DEVCTL:
             std::printf("[ATA     ] Write @ DEVCTL = 0x%02X\n", data);
