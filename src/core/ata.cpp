@@ -14,33 +14,43 @@
 
 namespace psp::ata {
 
-enum class ATA0Reg {
-    UNKNOWN0 = 0x1D600000,
-    UNKNOWN1 = 0x1D600004,
-    UNKNOWN2 = 0x1D600010,
-    UNKNOWN3 = 0x1D600014,
-    UNKNOWN4 = 0x1D60001C,
-    UNKNOWN5 = 0x1D600034,
-    UNKNOWN8 = 0x1D600044,
-};
+constexpr u32 SECTOR_NUM = 1800 * 1024 * 1024 / 2048;
+constexpr u32 SECTOR_START = 0x30000;
+constexpr u32 SECTOR_END = SECTOR_START + SECTOR_NUM - 1;
 
-enum class ATA1Reg {
-    // Command block
-    DATA  = 0x1D700000,
-    FEATURES = 0x1D700001,
-    ERROR = 0x1D700001,
-    SECTORCOUNT = 0x1D700002,
-    LBALOW  = 0x1D700003,
-    LBAMID  = 0x1D700004,
-    LBAHIGH = 0x1D700005,
-    DRIVE   = 0x1D700006,
-    COMMAND = 0x1D700007,
-    STATUS1 = 0x1D700007,
-    ENDOFDATA = 0x1D700008,
-    // Control block
-    DEVCTL  = 0x1D70000E,
-    STATUS2 = 0x1D70000E,
-};
+namespace ATA0Reg {
+    enum : u32 {
+        UNKNOWN0 = 0x1D600000,
+        UNKNOWN1 = 0x1D600004,
+        UNKNOWN2 = 0x1D600010,
+        UNKNOWN3 = 0x1D600014,
+        UNKNOWN4 = 0x1D60001C,
+        UNKNOWN5 = 0x1D600034,
+        UNKNOWN6 = 0x1D600038,
+        UNKNOWN7 = 0x1D600040,
+        UNKNOWN8 = 0x1D600044,
+    };
+}
+
+namespace ATA1Reg {
+    enum : u32 {
+        // Command block
+        DATA  = 0x1D700000,
+        FEATURES = 0x1D700001,
+        ERROR = 0x1D700001,
+        SECTORCOUNT = 0x1D700002,
+        LBALOW  = 0x1D700003,
+        LBAMID  = 0x1D700004,
+        LBAHIGH = 0x1D700005,
+        DRIVE   = 0x1D700006,
+        COMMAND = 0x1D700007,
+        STATUS1 = 0x1D700007,
+        ENDOFDATA = 0x1D700008,
+        // Control block
+        DEVCTL  = 0x1D70000E,
+        STATUS2 = 0x1D70000E,
+    };
+}
 
 namespace ATAStatus {
     enum : u8 {
@@ -67,9 +77,32 @@ namespace ATAPICommand {
 namespace SCSICommand {
     enum : u8 {
         TEST_UNIT_READY = 0x00,
+        REQUEST_SENSE = 0x03,
         INQUIRY = 0x12,
+        READ_STRUCTURE = 0xAD,
     };
 };
+
+namespace SenseKey {
+    enum : u8 {
+        NO_SENSE,
+        RECOVERED_ERROR,
+        NOT_READY,
+        MEDIUM_ERROR,
+        HARDWARE_ERROR,
+        ILLEGAL_REQUEST,
+        UNIT_ATTENTION,
+        DATA_PROTECT,
+        BLANK_CHECK,
+        VENDOR_SPECIFIC,
+        COPY_ABORTED,
+        ABORTED_COMMAND,
+        RESERVED,
+        VOLUME_OVERFLOW,
+        MISCOMPARE,
+        COMPLETED,
+    };
+}
 
 // ATA0 regs
 u32 ata0Unknown[9];
@@ -160,7 +193,9 @@ u8 discardAndGetInQueue(int num) {
 }
 
 u16 getOutQueue() {
-    assert(!outQueue.empty());
+    if (outQueue.empty()) {
+        return 0;
+    }
 
     u16 data = 0;
 
@@ -206,6 +241,98 @@ void scsiCmdInquiry() {
     startSCSICommand(2000 * scheduler::_1US);
 }
 
+void scsiCmdReadStructure() {
+    const auto formatCode = discardAndGetInQueue(6);
+
+    length = (((u32)discardAndGetInQueue(0) << 8) | (u32)discardAndGetInQueue(0)) + 4;
+
+    std::printf("[ATA     ] READ_STRUCTURE, length: 0x%04X, format code = 0x%02X\n", length, formatCode);
+
+    switch (formatCode) {
+        case 0x00:
+            // Values taken from JPCSP
+            // Structure data length
+            outQueue.push(length >> 8);
+            outQueue.push(length);
+            
+            outQueue.push(0x00);
+            outQueue.push(0x00);
+
+            outQueue.push(0x80);
+            outQueue.push(0x00);
+            outQueue.push(0x01);
+            outQueue.push(0xE0);
+            outQueue.push(0x00);
+
+            // Starting sector number
+            outQueue.push((u8)(SECTOR_START >> 16));
+            outQueue.push((u8)(SECTOR_START >> 8));
+            outQueue.push((u8)SECTOR_START);
+
+            outQueue.push(0x00);
+
+            // End sector
+            outQueue.push((u8)(SECTOR_END >> 16));
+            outQueue.push((u8)(SECTOR_END >> 8));
+            outQueue.push((u8)SECTOR_END);
+
+            outQueue.push(0x00);
+            outQueue.push(0x00);
+            outQueue.push(0x00);
+            outQueue.push(0x00);
+            outQueue.push(0x00);
+            outQueue.push(0x07);
+
+            for (u32 i = 22; i < length; i++) {
+                outQueue.push(0x00);
+            }
+
+            // TODO: test command duration
+            startSCSICommand(2000 * scheduler::_1US);
+            break;
+        default:
+            std::printf("Unhandled format code 0x%02X\n", formatCode);
+
+            exit(0);
+    }
+}
+
+void scsiCmdRequestSense() {
+    length = discardAndGetInQueue(3);
+
+    std::printf("[ATA     ] REQUEST_SENSE, length: 0x%02X\n", length);
+
+    outQueue.push(0x80); // Valid
+    outQueue.push(0x00); // Reserved
+
+    if (isUMDInserted()) {
+        outQueue.push(SenseKey::NO_SENSE);
+    } else {
+        outQueue.push(SenseKey::NOT_READY);
+    }
+
+    outQueue.push(0x00); // Descriptor
+    outQueue.push(0x0A); // Additional length
+    outQueue.push(0x00); // Information
+
+    if (isUMDInserted()) {
+        // More sense code information
+        outQueue.push(0x00);
+        outQueue.push(0x00);
+    } else {
+        outQueue.push(0x3A); // Medium not present
+        outQueue.push(0x02);
+    }
+
+    outQueue.push(0x00);
+    outQueue.push(0x00);
+    outQueue.push(0x00);
+    outQueue.push(0x00);
+
+    // TODO: test command duration
+    startSCSICommand(2000 * scheduler::_1US);
+}
+
 void scsiCmdTestUnitReady() {
     std::printf("[ATA     ] TEST_UNIT_READY\n");
 
@@ -239,8 +366,30 @@ void doSCSICommand() {
         case SCSICommand::TEST_UNIT_READY:
             scsiCmdTestUnitReady();
             break;
+        case SCSICommand::REQUEST_SENSE:
+            scsiCmdRequestSense();
+            break;
         case SCSICommand::INQUIRY:
             scsiCmdInquiry();
+            break;
+        case SCSICommand::READ_STRUCTURE:
+            scsiCmdReadStructure();
+            break;
+        case 0xF0:
+            std::puts("[ATA     ] SCSI command 0xF0");
+
+            outQueue.push(0x08);
+
+            // TODO: test command duration
+            startSCSICommand(2000 * scheduler::_1US);
+            break;
+        case 0xF1:
+            std::puts("[ATA     ] SCSI command 0xF1");
+
+            outQueue.push(0x00);
+            
+            // TODO: test command duration
+            startSCSICommand(2000 * scheduler::_1US);
             break;
         default:
             std::printf("Unhandled SCSI command 0x%02X\n", scsiCommand);
@@ -252,7 +401,7 @@ void doSCSICommand() {
 }
 
 u32 ata0Read(u32 addr) {
-    switch ((ATA0Reg)addr) {
+    switch (addr) {
         case ATA0Reg::UNKNOWN0:
             std::printf("[ATA     ] Unknown read @ 0x%08X\n", addr);
 
@@ -260,11 +409,15 @@ u32 ata0Read(u32 addr) {
         case ATA0Reg::UNKNOWN2:
             std::printf("[ATA     ] Unknown read @ 0x%08X\n", addr);
 
-            return 0;
+            return ata0Unknown[2];
         case ATA0Reg::UNKNOWN5:
             std::printf("[ATA     ] Unknown read @ 0x%08X\n", addr);
 
-            return 0;
+            return ata0Unknown[5];
+        case ATA0Reg::UNKNOWN7:
+            std::printf("[ATA     ] Unknown read @ 0x%08X\n", addr);
+
+            return ata0Unknown[7];
         case ATA0Reg::UNKNOWN8:
             std::printf("[ATA     ] Unknown read @ 0x%08X\n", addr);
 
@@ -277,7 +430,7 @@ u32 ata0Read(u32 addr) {
 }
 
 void ata0Write(u32 addr, u32 data) {
-    switch ((ATA0Reg)addr) {
+    switch (addr) {
         case ATA0Reg::UNKNOWN1:
             std::printf("[ATA     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
 
@@ -303,6 +456,16 @@ void ata0Write(u32 addr, u32 data) {
 
             ata0Unknown[5] = data;
             break;
+        case ATA0Reg::UNKNOWN6:
+            std::printf("[ATA     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            ata0Unknown[6] = data;
+            break;
+        case ATA0Reg::UNKNOWN7:
+            std::printf("[ATA     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
+
+            ata0Unknown[7] = data;
+            break;
         case ATA0Reg::UNKNOWN8:
             std::printf("[ATA     ] Unknown write @ 0x%08X = 0x%08X\n", addr, data);
 
@@ -316,7 +479,7 @@ void ata0Write(u32 addr, u32 data) {
 }
 
 u8 ata1Read8(u32 addr) {
-    switch ((ATA1Reg)addr) {
+    switch (addr) {
         case ATA1Reg::ERROR:
             std::puts("[ATA     ] Read @ ERROR");
         
@@ -355,7 +518,7 @@ u8 ata1Read8(u32 addr) {
 }
 
 u16 ata1Read16(u32 addr) {
-    switch ((ATA1Reg)addr) {
+    switch (addr) {
         case ATA1Reg::DATA:
             std::puts("[ATA     ] Read @ DATA");
 
@@ -368,7 +531,7 @@ u16 ata1Read16(u32 addr) {
 }
 
 void ata1Write8(u32 addr, u8 data) {
-    switch ((ATA1Reg)addr) {
+    switch (addr) {
         case ATA1Reg::FEATURES:
             std::printf("[ATA     ] Write @ FEATURES = 0x%02X\n", data);
 
@@ -422,7 +585,7 @@ void ata1Write8(u32 addr, u8 data) {
 }
 
 void ata1Write16(u32 addr, u16 data) {
-    switch ((ATA1Reg)addr) {
+    switch (addr) {
         case ATA1Reg::DATA:
             std::printf("[ATA     ] Write @ DATA = 0x%04X\n", data);
 

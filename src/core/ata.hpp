@@ -9,6 +9,8 @@
 
 namespace psp::ata {
 
+void finishSCSICommand();
+
 void init(const char *path);
 
 // ATA0
