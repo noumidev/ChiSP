@@ -1,3 +1,0 @@
-[submodule "cryptopp-cmake"]
-	path = cryptopp-cmake
-	url = https://github.com/abdes/cryptopp-cmake
