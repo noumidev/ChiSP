@@ -8,4 +8,4 @@
 #include "types.hpp"
 
 // Reads data from file `path` into array `data`
-void readFile(const char *path, u8 *data, size_t size);
+void readFile(const char *path, u8 *const data, const size_t size);

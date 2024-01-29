@@ -32,7 +32,7 @@ enum class CPUStatus {
 };
 
 template<typename T>
-inline bool isAligned(u32 addr) requires std::is_unsigned_v<T> {
+inline bool isAligned(const u32 addr) requires std::is_unsigned_v<T> {
     if constexpr (std::is_same<T, u8>()) {
         return true;
     }
@@ -124,11 +124,11 @@ public:
         setPC(BOOT_EXCEPTION_VECTOR_BASE);
     }
 
-    u32 get(int idx) {
+    u32 get(const int idx) {
         return regs[idx];
     }
 
-    void set(int idx, u32 data) {
+    void set(const int idx, const u32 data) {
         regs[idx] = data;
 
         // R0 is hardwired to 0
@@ -140,7 +140,7 @@ public:
     }
 
     // Sets PC and NPC
-    void setPC(u32 addr) {
+    void setPC(const u32 addr) {
         if (addr == 0) {
             PLOG_FATAL << "Jump to NULL";
 
@@ -158,7 +158,7 @@ public:
     }
 
     // Sets NPC on branches
-    void setBranchPC(u32 addr) {
+    void setBranchPC(const u32 addr) {
         if (addr == 0) {
             PLOG_FATAL << "Jump to NULL";
 
@@ -185,7 +185,7 @@ public:
     }
 
     template<bool isLikely>
-    void doBranch(u32 target, bool cond, u32 linkReg) {
+    void doBranch(const u32 target, const bool cond, const int linkReg) {
         if (isDelaySlot()) {
             PLOG_FATAL << "Branch instruction in delay slot";
 

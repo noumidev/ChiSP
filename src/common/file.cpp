@@ -10,7 +10,7 @@
 
 #include <plog/Log.h>
 
-void readFile(const char *path, u8 *data, size_t size) {
+void readFile(const char *path, u8 *const data, const size_t size) {
     // Try opening the file
     FILE *file = std::fopen(path, "rb");
 
