@@ -22,8 +22,9 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/external/plog)
 set(SOURCES
     src/main.cpp
     src/common/file.cpp
-    src/sys/memory.cpp
     src/sys/emulator.cpp
+    src/sys/memory.cpp
+    src/sys/scheduler.cpp
 )
 
 # Set header files
@@ -32,8 +33,9 @@ set(HEADERS
     include/common/types.hpp
     include/hw/allegrex/coprocessor.hpp
     include/hw/allegrex/cpu.hpp
-    include/sys/memory.hpp
     include/sys/emulator.hpp
+    include/sys/memory.hpp
+    include/sys/scheduler.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

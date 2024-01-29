@@ -8,7 +8,9 @@
 #include <plog/Log.h>
 
 #include "hw/allegrex/cpu.hpp"
+
 #include "sys/memory.hpp"
+#include "sys/scheduler.hpp"
 
 namespace sys::emulator {
 
@@ -25,10 +27,12 @@ void init(const char *bootPath, const char *nandPath) {
     me.init();
 
     memory::init(bootPath);
+    scheduler::init();
 }
 
 void deinit() {
     memory::deinit();
+    scheduler::deinit();
 }
 
 void reset() {
@@ -36,6 +40,7 @@ void reset() {
     me.reset();
 
     memory::reset();
+    scheduler::reset();
 }
 
 void run() {}
