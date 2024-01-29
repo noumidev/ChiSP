@@ -34,7 +34,6 @@
 # Dev
 .vscode
 build
-files
 
 # macOS
 .DS_Store
