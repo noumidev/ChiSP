@@ -101,14 +101,12 @@ public:
             write16 = &sys::memory::write<u16>;
             write32 = &sys::memory::write<u32>;
         } else {
-            PLOG_FATAL << "Unhandled MediaEngine init";
-
-            exit(0);
+            PLOG_WARNING << "Unhandled MediaEngine init";
         }
     }
 
     void reset() {
-        PLOG_INFO << getTypeName() << ": Reset";
+        PLOG_INFO << "Reset";
 
         // Halt MediaEngine
         if constexpr (type == CPUType::Allegrex) {
@@ -124,14 +122,6 @@ public:
         inDelaySlot[0] = inDelaySlot[1] = false;
 
         setPC(BOOT_EXCEPTION_VECTOR_BASE);
-    }
-
-    constexpr const char *getTypeName() {
-        if constexpr (type == CPUType::Allegrex) {
-            return "Allegrex";
-        } else {
-            return "MediaEngine";
-        }
     }
 
     u32 get(int idx) {
@@ -152,13 +142,13 @@ public:
     // Sets PC and NPC
     void setPC(u32 addr) {
         if (addr == 0) {
-            PLOG_FATAL << getTypeName() << ": Jump to NULL";
+            PLOG_FATAL << "Jump to NULL";
 
             exit(0);
         }
 
         if (!isAligned<u32>(addr)) {
-            PLOG_FATAL << getTypeName() << ": Jump target is not aligned (addr = " << std::hex << addr << ")";
+            PLOG_FATAL << "Jump target is not aligned (addr = " << std::hex << addr << ")";
 
             exit(0);
         }
@@ -197,7 +187,7 @@ public:
     template<bool isLikely>
     void doBranch(u32 target, bool cond, u32 linkReg) {
         if (isDelaySlot()) {
-            PLOG_FATAL << getTypeName() << ": Branch instruction in delay slot";
+            PLOG_FATAL << "Branch instruction in delay slot";
 
             exit(0);
         }
