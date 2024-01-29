@@ -30,6 +30,8 @@ set(SOURCES
 set(HEADERS
     include/common/file.hpp
     include/common/types.hpp
+    include/hw/allegrex/coprocessor.hpp
+    include/hw/allegrex/cpu.hpp
     include/sys/memory.hpp
     include/sys/emulator.hpp
 )
