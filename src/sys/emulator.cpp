@@ -12,8 +12,7 @@
 namespace sys::emulator {
 
 void init(const char *bootPath, const char *nandPath) {
-    PLOG_INFO << "Boot ROM = " << bootPath;
-    PLOG_INFO << "NAND image = " << nandPath;
+    (void)nandPath;
 
     memory::init(bootPath);
 }
