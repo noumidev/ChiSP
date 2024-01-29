@@ -22,7 +22,7 @@ void init(const char *bootPath, const char *nandPath) {
     (void)nandPath;
 
     cpu.init();
-    //me.init();
+    me.init();
 
     memory::init(bootPath);
 }
